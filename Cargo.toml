@@ -1,5 +1,11 @@
 [workspace]
 members = [
+    # "domains/ebpf",  # Requires kernel headers - temporarily disabled for CI
+    "domains/wasm",
+    "domains/filesystem",
+    "domains/core-dev",
+    "domains/security",
+]
     "domains/security",
     "domains/ebpf",
     "domains/wasm",
