@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clawos.org/specs/p1/P1.2-seccomp-whitelist.schema.json",
+  "title": "ClawOS seccomp Syscall Whitelist Schema",
+  "description": "Frozen JSON Schema defining the seccomp syscall whitelist for IronClaw Rust processes. This schema is version-controlled and signed by the Security Agent.",
+  "version": "1.0.0",
+  "status": "FROZEN",
+  "sha256_signature": "PLACEHOLDER_SHA256_SIGNATURE",
+  "modification_authority": {
+    "agent": "Security Agent",
+    "description": "Only the Security Agent may modify this schema. Any changes require SHA256 signature update and ClawFS Vault storage.",
+    "approval_required": true,
+    "vault_storage_required": true
+  },
+  "validation_rules": {
+    "strict_mode": true,
+    "default_action": "DENY",
+    "description": "No syscall outside the whitelist is permitted. All syscalls must be explicitly allowed or conditionally allowed."
+  },
+  "strace_validation": {
+    "required": true,
+    "phase": "C-02",
+    "description": "Tokio async runtime syscalls must be verified via strace analysis in Phase 2, Task C-02. Current list is based on IronClaw core requirements and may be expanded after validation.",
+    "conflict_resolution": "HIGH - Any discrepancies between this whitelist and actual strace output must be documented and resolved by Security Agent."
+  },
+  "type": "object",
+  "required": [
+    "schema_version",
+    "whitelist_id",
+    "created_at",
+    "created_by",
+    "syscalls"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Version of the whitelist schema (must match schema version)"
+    },
+    "whitelist_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+      "description": "Unique identifier for this whitelist instance"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when whitelist was created"
+    },
+    "created_by": {
+      "type": "string",
+      "enum": ["Security Agent"],
+      "description": "Agent that created this whitelist"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last update (optional for new whitelists)"
+    },
+    "updated_by": {
+      "type": "string",
+      "enum": ["Security Agent"],
+      "description": "Agent that last updated this whitelist"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA256 signature of the whitelist content (excluding this field)"
+    },
+    "syscalls": {
+      "type": "array",
+      "description": "List of syscalls with their permission levels and conditions",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "permission"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "System call name (must match Linux syscall name)",
+            "examples": [
+              "read", "write", "open", "openat", "close", "stat", "fstat",
+              "mmap", "munmap", "mprotect", "brk", "madvise",
+              "socket", "connect", "recv", "send", "poll",
+              "epoll_create1", "epoll_ctl", "epoll_wait",
+              "clock_gettime", "clock_nanosleep",
+              "rt_sigaction", "rt_sigprocmask", "rt_sigreturn",
+              "exit", "exit_group", "getpid", "futex", "clone", "clone3",
+              "prctl", "getrandom", "eventfd2", "pipe2"
+            ]
+          },
+          "permission": {
+            "type": "string",
+            "enum": ["ALLOW", "DENY", "CONDITIONAL"],
+            "description": "Permission level for this syscall"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "memory",
+              "file_io",
+              "process",
+              "network",
+              "time",
+              "signals",
+              "misc",
+              "tokio_runtime"
+            ],
+            "description": "Functional category of the syscall"
+          },
+          "conditions": {
+            "type": "object",
+            "description": "Conditions for CONDITIONAL permission (required when permission=CONDITIONAL)",
+            "properties": {
+              "port_restriction": {
+                "type": "object",
+                "description": "Network port restrictions for socket/connect syscalls",
+                "properties": {
+                  "allowed_ports": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65535
+                    },
+                    "description": "List of allowed ports"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Human-readable description of port restriction"
+                  }
+                },
+                "required": ["allowed_ports"]
+              },
+              "argument_filter": {
+                "type": "object",
+                "description": "Argument-based filtering conditions",
+                "properties": {
+                  "arg_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Argument index to filter (0-based)"
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": ["eq", "ne", "gt", "lt", "ge", "le", "masked_eq"],
+                    "description": "Comparison operator"
+                  },
+                  "value": {
+                    "type": "integer",
+                    "description": "Value to compare against"
+                  },
+                  "mask": {
+                    "type": "integer",
+                    "description": "Mask value for masked_eq operator"
+                  }
+                },
+                "required": ["arg_index", "operator", "value"]
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description of all conditions"
+              }
+            },
+            "required": ["description"]
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes or rationale for this syscall entry"
+          },
+          "verified_by_strace": {
+            "type": "boolean",
+            "description": "Whether this syscall has been verified via strace analysis (Phase 2, Task C-02)"
+          },
+          "tokio_required": {
+            "type": "boolean",
+            "description": "Whether this syscall is required by tokio async runtime (to be verified in C-02)"
+          }
+        },
+        "if": {
+          "properties": {
+            "permission": {
+              "const": "CONDITIONAL"
+            }
+          },
+          "required": ["permission"]
+        },
+        "then": {
+          "required": ["conditions"]
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata about the whitelist",
+      "properties": {
+        "target_process": {
+          "type": "string",
+          "description": "Target process name or pattern"
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["production", "staging", "development", "testing"],
+          "description": "Deployment environment"
+        },
+        "security_level": {
+          "type": "string",
+          "enum": ["strict", "moderate", "permissive"],
+          "description": "Security strictness level"
+        },
+        "tokio_version": {
+          "type": "string",
+          "description": "Tokio runtime version (for reference)"
+        },
+        "rust_version": {
+          "type": "string",
+          "description": "Rust compiler version (for reference)"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0.0",
+      "whitelist_id": "550e8400-e29b-41d4-a716-446655440000",
+      "created_at": "2026-02-24T00:00:00Z",
+      "created_by": "Security Agent",
+      "syscalls": [
+        {
+          "name": "read",
+          "permission": "ALLOW",
+          "category": "file_io",
+          "verified_by_strace": true,
+          "tokio_required": false
+        },
+        {
+          "name": "socket",
+          "permission": "CONDITIONAL",
+          "category": "network",
+          "conditions": {
+            "port_restriction": {
+              "allowed_ports": [5432],
+              "description": "PostgreSQL database port only"
+            },
+            "description": "Socket creation allowed only for PostgreSQL connections (port 5432)"
+          },
+          "verified_by_strace": true,
+          "tokio_required": false
+        }
+      ]
+    }
+  ]
+}

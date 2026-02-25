@@ -1,0 +1,24 @@
+[workspace]
+members = [
+    "domains/security",
+    "domains/ebpf",
+    "domains/wasm",
+    "domains/filesystem",
+    "domains/core-dev",
+]
+resolver = "2"
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0 OR MIT"
+authors = ["ClawOS Project"]
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true

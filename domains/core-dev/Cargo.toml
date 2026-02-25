@@ -1,0 +1,98 @@
+[package]
+name = "clawos-core-dev"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["ClawOS Project"]
+license = "Apache-2.0 OR MIT"
+description = "ClawOS Core Development: Agent Loop Service (systemd-like daemon orchestrator)"
+repository = "https://github.com/clawos/clawos"
+keywords = ["agent", "orchestration", "daemon", "systemd", "ipc"]
+categories = ["os::linux-apis", "asynchronous"]
+
+[dependencies]
+# Async runtime (tokio latest stable)
+tokio = { version = "1.40", features = ["full"] }
+
+# Command-line argument parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# JSON serialization/deserialization (IPC protocol)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async traits
+async-trait = "0.1"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# UUID generation (IPC message IDs)
+uuid = { version = "1.8", features = ["v4", "serde"] }
+
+# Unix domain sockets (built into tokio 1.0+, DEPRECATED: tokio-uds)
+
+# Time handling
+chrono = "0.4"
+
+# Security: seccomp-BPF integration (Rust crate version)
+libseccomp = "0.4"
+
+# Security: namespace isolation
+nix = { version = "0.28", features = ["sched", "mount", "user"] }
+
+# Filesystem operations (built into tokio 1.0+, DEPRECATED: tokio-fs)
+
+# Metrics and monitoring
+prometheus = { version = "0.13", optional = true }
+
+# Configuration management
+config = "0.14"
+
+# Signal handling (systemd-like daemon)
+signal-hook = "0.3"
+signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
+
+# Process management
+sysinfo = "0.30"
+
+# SQLite integration (ClawFS - replacing PostgreSQL)
+rusqlite = { version = "0.31", features = ["bundled"], optional = true }
+
+# HNSW vector index (ClawFS hybrid search)
+usearch = { version = "2.0", optional = true }
+
+[dev-dependencies]
+# Testing
+tempfile = "3.12"
+mockall = "0.12"
+
+[features]
+default = ["metrics", "clawfs"]
+metrics = ["dep:prometheus"]
+clawfs = ["dep:rusqlite", "dep:usearch"]
+tokio-console = ["tokio/tracing"]
+
+[lib]
+name = "clawos_core_dev"
+path = "src/lib.rs"
+
+[[bin]]
+name = "agent-loop"
+path = "src/bin/agent_loop.rs"
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
+
+# Systemd integration
+[package.metadata.systemd]
+units = [
+    { name = "clawos-agent-loop.service", description = "ClawOS Agent Loop Service" },
+    { name = "clawos-agent-loop.socket", description = "ClawOS Agent Loop IPC Socket" }
+]

@@ -1,0 +1,65 @@
+[package]
+name = "clawfs"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["ClawOS Project"]
+license = "MIT"
+repository = "https://github.com/clawos/clawos"
+description = "ClawFS - AI-aware filesystem with vector indexing and encrypted secrets vault"
+keywords = ["filesystem", "vector-search", "encryption", "sqlite", "hnsw"]
+categories = ["filesystem", "database", "cryptography"]
+
+[dependencies]
+# SQLite with encryption support
+rusqlite = { version = "0.30", features = ["bundled"] }
+
+# Vector similarity search (HNSW)
+usearch = { version = "2.0", optional = true }
+
+# AES-256-GCM encryption
+aes-gcm = "0.10"
+
+# Key derivation
+pbkdf2 = { version = "0.12", features = ["hmac"] }
+hmac = "0.12"
+sha2 = "0.10"
+
+# Random number generation
+rand = "0.8"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Base64 encoding
+base64 = "0.21"
+
+# Time handling
+chrono = "0.4"
+
+# Error handling
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+
+[dev-dependencies]
+tempfile = "3.8"
+
+[features]
+default = ["hnsw"]
+hnsw = ["usearch"]
+full-encryption = []
+
+[[example]]
+name = "path_validation"
+path = "examples/path_validation.rs"
+
+[[example]]
+name = "encryption"
+path = "examples/encryption.rs"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

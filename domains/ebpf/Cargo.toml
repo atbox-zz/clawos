@@ -1,0 +1,34 @@
+[package]
+name = "clawos-ebpf"
+version = "0.1.0"
+edition = "2021"
+authors = ["ClawOS Project"]
+license = "Apache-2.0 OR MIT"
+description = "eBPF monitoring agent for ClawOS kernel-level observability"
+
+[dependencies]
+aya = { version = "0.13", default-features = false, features = ["build_bpf"] }
+aya-log = "0.2"
+log = "0.4"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+thiserror = "1"
+libc = "0.2"
+bytes = "1"
+
+[build-dependencies]
+aya-build = { version = "0.1", features = ["build_bpf"] }
+
+[[bin]]
+name = "clawos-ebpf"
+path = "src/main.rs"
+
+[profile.dev]
+opt-level = 3
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

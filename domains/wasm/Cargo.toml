@@ -1,0 +1,96 @@
+[package]
+name = "clawos-wasm"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["ClawOS Project"]
+license = "Apache-2.0 OR MIT"
+description = "WASM Runtime bridge userspace daemon for ClawOS - connects WASM tools to kernel ABI via WIT interface"
+repository = "https://github.com/clawos/clawos"
+keywords = ["wasm", "wasmtime", "wit", "component-model", "sandbox"]
+categories = ["wasm", "os::linux-apis", "api-bindings"]
+
+[dependencies]
+# wasmtime 26+ with Component Model support (latest stable)
+wasmtime = { version = "26", features = ["component-model", "async", "cranelift"] }
+wasmtime-wasi = { version = "26", features = ["preview1"] }
+wasmtime-wasi-http = "26"
+
+# WIT bindings generation (latest compatible with wasmtime 26)
+wit-bindgen = "0.26"
+wit-bindgen-core = "0.26"
+wit-bindgen-rust = "0.26"
+
+# cargo-component is a CLI tool, not a library dependency
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+log = "0.4"
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+
+# System calls and libc
+libc = "0.2"
+nix = { version = "0.29", features = ["fs", "process", "socket", "net", "user"] }
+
+# cgroup v2 management
+cgroups-rs = "0.3"
+
+# Security: seccomp filter (Rust crate version)
+libseccomp = "0.4"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# IPC protocol (P1.7)
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# Memory management
+memmap2 = "0.9"
+
+# Time handling
+chrono = "0.4"
+num_cpus = "1.16"
+
+[dev-dependencies]
+tempfile = "3.12"
+criterion = "0.5"
+
+[features]
+default = ["tokio"]
+tokio = ["dep:tokio"]
+dev = ["tracing-subscriber/env-filter"]
+
+[lib]
+name = "clawos_wasm"
+path = "src/lib.rs"
+
+[[bin]]
+name = "clawos-wasm-daemon"
+path = "src/main.rs"
+
+[profile.dev]
+opt-level = 2
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
+
+[package.metadata.component]
+package = "clawos:kernel"
+target = "wasm32-unknown-unknown"

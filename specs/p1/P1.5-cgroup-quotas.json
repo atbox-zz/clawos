@@ -1,0 +1,549 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clawos.org/specs/p1/P1.5-cgroup-quotas.json",
+  "title": "ClawOS cgroup v2 Resource Quota Specification",
+  "description": "Standard resource quota values for all ClawOS components using cgroup v2 hierarchy",
+  "version": "1.0.0",
+  "status": "FROZEN",
+  "frozen_at": "2026-02-24T00:00:00Z",
+  "sha256_signature": "PLACEHOLDER_SHA256_SIGNATURE",
+  "spec_id": "P1.5",
+  "owner": "Infra Agent",
+  "reviewers": [
+    "Kernel Engineer",
+    "Security Agent",
+    "Core Dev Agent"
+  ],
+  "kernel_requirements": {
+    "minimum_version": "6.6 LTS",
+    "required_configs": [
+      "CONFIG_CGROUPS=y",
+      "CONFIG_MEMCG=y",
+      "CONFIG_CGROUP_PIDS=y",
+      "CONFIG_CGROUP_BPF=y",
+      "CONFIG_CGROUP_CPUACCT=y",
+      "CONFIG_CGROUP_SCHED=y",
+      "CONFIG_BLK_CGROUP=y",
+      "CONFIG_CGROUP_WRITEBACK=y"
+    ],
+    "boot_parameters": [
+      "cgroup_no_v1=all",
+      "cgroup_enable=memory",
+      "cgroup_memory=1"
+    ],
+    "mount_point": "/sys/fs/cgroup",
+    "hierarchy_mode": "unified"
+  },
+  "slice_hierarchy": {
+    "description": "cgroup v2 slice hierarchy for ClawOS resource isolation",
+    "base_path": "/sys/fs/cgroup/clawos",
+    "slices": [
+      {
+        "name": "root.slice",
+        "path": "/clawos/root.slice",
+        "description": "Base slice for all ClawOS processes",
+        "parent": null,
+        "resource_limits": {
+          "memory.max": "4G",
+          "cpu.max": "1000000 1000000",
+          "pids.max": "max",
+          "cpu.weight": "10000",
+          "io.weight": "10000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "0"
+        }
+      },
+      {
+        "name": "agents.slice",
+        "path": "/clawos/agents.slice",
+        "description": "AI agent processes (Agent Loop, specialized agents)",
+        "parent": "/clawos/root.slice",
+        "resource_limits": {
+          "memory.max": "2G",
+          "cpu.max": "500000 1000000",
+          "pids.max": "512",
+          "cpu.weight": "8000",
+          "io.weight": "8000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "1"
+        },
+        "notes": [
+          "pids.max=512 accounts for tokio async thread pool (default: num_cpus * 2)",
+          "Includes buffer for agent subprocesses and tool execution",
+          "OOM group kill prevents cascading failures"
+        ]
+      },
+      {
+        "name": "wasm.slice",
+        "path": "/clawos/wasm.slice",
+        "description": "WASM tool execution sandbox",
+        "parent": "/clawos/root.slice",
+        "resource_limits": {
+          "memory.max": "512M",
+          "cpu.max": "100000 1000000",
+          "pids.max": "128",
+          "cpu.weight": "5000",
+          "io.weight": "5000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "1"
+        },
+        "notes": [
+          "Strict isolation: 10% CPU quota prevents runaway WASM tools",
+          "512M memory limit per WASM instance",
+          "pids.max=128 allows for tokio threads + WASM workers + buffer",
+          "No swap for security (prevents memory exhaustion attacks)"
+        ]
+      },
+      {
+        "name": "kernel.slice",
+        "path": "/clawos/kernel.slice",
+        "description": "Kernel services (eBPF agents, LSM hooks, ClawFS daemon)",
+        "parent": "/clawos/root.slice",
+        "resource_limits": {
+          "memory.max": "1G",
+          "cpu.max": "300000 1000000",
+          "pids.max": "64",
+          "cpu.weight": "9000",
+          "io.weight": "9000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "0"
+        },
+        "notes": [
+          "High priority (weight 9000) for kernel services",
+          "30% CPU quota ensures monitoring responsiveness",
+          "OOM group disabled to prevent kernel service termination"
+        ]
+      },
+      {
+        "name": "worker.slice",
+        "path": "/clawos/worker.slice",
+        "description": "Worker pool for async task execution",
+        "parent": "/clawos/agents.slice",
+        "resource_limits": {
+          "memory.max": "1G",
+          "cpu.max": "400000 1000000",
+          "pids.max": "256",
+          "cpu.weight": "7000",
+          "io.weight": "7000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "1"
+        },
+        "notes": [
+          "Each worker gets dedicated cgroup sub-slice",
+          "40% CPU quota for worker pool",
+          "pids.max=256 per worker slice (tokio threads + buffer)"
+        ]
+      }
+    ]
+  },
+  "component_quotas": {
+    "description": "Resource quota mapping for IronClaw components to cgroup slices",
+    "components": [
+      {
+        "name": "Agent Loop",
+        "ironclaw_source": "src/agent/loop.rs",
+        "cgroup_path": "/clawos/agents.slice/agent-loop",
+        "resource_limits": {
+          "memory.max": "1G",
+          "cpu.max": "200000 1000000",
+          "pids.max": "256",
+          "cpu.weight": "8000",
+          "io.weight": "8000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "1"
+        },
+        "tokio_config": {
+          "worker_threads": "num_cpus * 2",
+          "max_blocking_threads": "512",
+          "thread_stack_size": "2M"
+        },
+        "notes": [
+          "20% CPU quota for main agent loop",
+          "pids.max=256 = tokio threads (e.g., 32 on 16-core) + buffer (224)",
+          "High priority for core orchestration logic"
+        ]
+      },
+      {
+        "name": "Worker Pool",
+        "ironclaw_source": "src/worker/",
+        "cgroup_path": "/clawos/worker.slice",
+        "resource_limits": {
+          "memory.max": "512M",
+          "cpu.max": "100000 1000000",
+          "pids.max": "64",
+          "cpu.weight": "7000",
+          "io.weight": "7000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "1"
+        },
+        "per_worker_slice": true,
+        "max_workers": 8,
+        "notes": [
+          "Each worker gets dedicated sub-slice: /clawos/worker.slice/worker-{N}",
+          "10% CPU quota per worker",
+          "64 PIDs per worker (tokio threads + buffer)",
+          "8 workers max = 4G total memory, 80% total CPU"
+        ]
+      },
+      {
+        "name": "WASM Sandbox",
+        "ironclaw_source": "channels-src/",
+        "cgroup_path": "/clawos/wasm.slice",
+        "resource_limits": {
+          "memory.max": "256M",
+          "cpu.max": "50000 1000000",
+          "pids.max": "32",
+          "cpu.weight": "5000",
+          "io.weight": "5000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "1"
+        },
+        "per_instance_slice": true,
+        "max_instances": 16,
+        "security_hardening": {
+          "seccomp_filter": "strict",
+          "namespace_isolation": true,
+          "no_network_egress": true,
+          "readonly_rootfs": true
+        },
+        "notes": [
+          "5% CPU quota per WASM instance",
+          "256M memory limit per instance (strict isolation)",
+          "32 PIDs per instance (wasmtime + tokio + buffer)",
+          "16 instances max = 4G total memory, 80% total CPU",
+          "All network requests proxied through host function"
+        ]
+      },
+      {
+        "name": "eBPF Agent",
+        "ironclaw_source": "src/ebpf/",
+        "cgroup_path": "/clawos/kernel.slice/ebpf-agent",
+        "resource_limits": {
+          "memory.max": "256M",
+          "cpu.max": "100000 1000000",
+          "pids.max": "16",
+          "cpu.weight": "9000",
+          "io.weight": "9000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "0"
+        },
+        "notes": [
+          "Highest priority (weight 9000) for monitoring",
+          "10% CPU quota for eBPF program loading/processing",
+          "OOM group disabled to prevent monitoring loss"
+        ]
+      },
+      {
+        "name": "ClawFS Daemon",
+        "ironclaw_source": "src/fs/",
+        "cgroup_path": "/clawos/kernel.slice/clawfs-daemon",
+        "resource_limits": {
+          "memory.max": "512M",
+          "cpu.max": "150000 1000000",
+          "pids.max": "32",
+          "cpu.weight": "8500",
+          "io.weight": "9500",
+          "memory.swap.max": "0",
+          "memory.oom.group": "0"
+        },
+        "notes": [
+          "High I/O priority (weight 9500) for filesystem operations",
+          "15% CPU quota for vector search and encryption",
+          "OOM group disabled to prevent data loss"
+        ]
+      },
+      {
+        "name": "Security Agent",
+        "ironclaw_source": "src/security/",
+        "cgroup_path": "/clawos/kernel.slice/security-agent",
+        "resource_limits": {
+          "memory.max": "256M",
+          "cpu.max": "50000 1000000",
+          "pids.max": "16",
+          "cpu.weight": "9000",
+          "io.weight": "8000",
+          "memory.swap.max": "0",
+          "memory.oom.group": "0"
+        },
+        "notes": [
+          "High priority for security enforcement",
+          "5% CPU quota for seccomp/AppArmor enforcement",
+          "OOM group disabled to prevent security bypass"
+        ]
+      },
+      {
+        "name": "Router",
+        "ironclaw_source": "src/router/",
+        "cgroup_path": "/clawos/agents.slice/router",
+        "resource_limits": {
+          "memory.max": "512M",
+          "cpu.max": "100000 1000000",
+          "pids.max": "64",
+          "cpu.weight": "7500",
+          "io.weight": "7500",
+          "memory.swap.max": "0",
+          "memory.oom.group": "1"
+        },
+        "notes": [
+          "10% CPU quota for request routing",
+          "64 PIDs for tokio threads + buffer",
+          "Replaces PostgreSQL dependency with in-memory routing"
+        ]
+      },
+      {
+        "name": "Orchestrator",
+        "ironclaw_source": "src/orchestrator/",
+        "cgroup_path": "/clawos/agents.slice/orchestrator",
+        "resource_limits": {
+          "memory.max": "512M",
+          "cpu.max": "100000 1000000",
+          "pids.max": "64",
+          "cpu.weight": "7500",
+          "io.weight": "7500",
+          "memory.swap.max": "0",
+          "memory.oom.group": "1"
+        },
+        "notes": [
+          "10% CPU quota for namespace orchestration",
+          "64 PIDs for tokio threads + buffer",
+          "Replaces Docker with Linux namespaces"
+        ]
+      }
+    ]
+  },
+  "quota_validation_schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ClawOS cgroup Quota Validation Schema",
+    "type": "object",
+    "required": [
+      "memory.max",
+      "cpu.max",
+      "pids.max",
+      "cpu.weight",
+      "io.weight",
+      "memory.swap.max"
+    ],
+    "properties": {
+      "memory.max": {
+        "type": "string",
+        "pattern": "^(\\d+|[Mm][Aa][Xx])$|^(\\d+[KMGTP])$",
+        "description": "Memory limit in bytes or with suffix (K, M, G, T, P), or 'max'"
+      },
+      "cpu.max": {
+        "type": "string",
+        "pattern": "^\\d+ \\d+$|^max$",
+        "description": "CPU quota in format 'quota period' (microseconds) or 'max'"
+      },
+      "pids.max": {
+        "type": "string",
+        "pattern": "^\\d+$|^max$",
+        "description": "Maximum number of processes, or 'max' for unlimited"
+      },
+      "cpu.weight": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 10000,
+        "description": "Relative CPU priority (1-10000)"
+      },
+      "io.weight": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 10000,
+        "description": "Relative I/O priority (1-10000)"
+      },
+      "memory.swap.max": {
+        "type": "string",
+        "pattern": "^\\d+$|^0$|^max$",
+        "description": "Swap limit in bytes, 0 to disable, or 'max'"
+      },
+      "memory.oom.group": {
+        "type": "string",
+        "pattern": "^0$|^1$",
+        "description": "Enable OOM group kill (1) or disable (0)"
+      }
+    }
+  },
+  "example_configurations": {
+    "description": "Example cgroup configuration files for reference",
+    "configs": [
+      {
+        "name": "root.slice.conf",
+        "path": "/etc/systemd/system/clawos-root.slice",
+        "content": "[Unit]\nDescription=ClawOS Root Slice\nDocumentation=https://clawos.org/docs/cgroup\n\n[Slice]\nMemoryMax=4G\nCPUQuota=100%\nCPUWeight=10000\nIOWeight=10000\nMemorySwapMax=0\nTasksMax=max"
+      },
+      {
+        "name": "agents.slice.conf",
+        "path": "/etc/systemd/system/clawos-agents.slice",
+        "content": "[Unit]\nDescription=ClawOS AI Agents Slice\nDocumentation=https://clawos.org/docs/cgroup\n\n[Slice]\nMemoryMax=2G\nCPUQuota=50%\nCPUWeight=8000\nIOWeight=8000\nMemorySwapMax=0\nTasksMax=512\nOOMPolicy=continue"
+      },
+      {
+        "name": "wasm.slice.conf",
+        "path": "/etc/systemd/system/clawos-wasm.slice",
+        "content": "[Unit]\nDescription=ClawOS WASM Sandbox Slice\nDocumentation=https://clawos.org/docs/cgroup\n\n[Slice]\nMemoryMax=512M\nCPUQuota=10%\nCPUWeight=5000\nIOWeight=5000\nMemorySwapMax=0\nTasksMax=128\nOOMPolicy=continue"
+      },
+      {
+        "name": "kernel.slice.conf",
+        "path": "/etc/systemd/system/clawos-kernel.slice",
+        "content": "[Unit]\nDescription=ClawOS Kernel Services Slice\nDocumentation=https://clawos.org/docs/cgroup\n\n[Slice]\nMemoryMax=1G\nCPUQuota=30%\nCPUWeight=9000\nIOWeight=9000\nMemorySwapMax=0\nTasksMax=64\nOOMPolicy=stop"
+      },
+      {
+        "name": "agent-loop.service.conf",
+        "path": "/etc/systemd/system/clawos-agent-loop.service",
+        "content": "[Unit]\nDescription=ClawOS Agent Loop\nDocumentation=https://clawos.org/docs/agent-loop\nAfter=network.target clawos-root.slice\nRequires=clawos-root.slice\n\n[Service]\nType=notify\nSlice=clawos-agents.slice\nMemoryMax=1G\nCPUQuota=20%\nCPUWeight=8000\nIOWeight=8000\nMemorySwapMax=0\nTasksMax=256\nOOMPolicy=continue\nExecStart=/usr/bin/clawos-agent-loop\nRestart=on-failure\nRestartSec=5s\n\n[Install]\nWantedBy=multi-user.target"
+      },
+      {
+        "name": "wasm-sandbox@.service.conf",
+        "path": "/etc/systemd/system/clawos-wasm-sandbox@.service",
+        "content": "[Unit]\nDescription=ClawOS WASM Sandbox Instance %i\nDocumentation=https://clawos.org/docs/wasm-sandbox\nAfter=network.target clawos-wasm.slice\nRequires=clawos-wasm.slice\n\n[Service]\nType=notify\nSlice=clawos-wasm.slice\nMemoryMax=256M\nCPUQuota=5%\nCPUWeight=5000\nIOWeight=5000\nMemorySwapMax=0\nTasksMax=32\nOOMPolicy=continue\nExecStart=/usr/bin/clawos-wasm-sandbox --instance-id=%i\nRestart=on-failure\nRestartSec=1s\n\n[Install]\nWantedBy=multi-user.target"
+      }
+    ]
+  },
+  "resource_allocation_summary": {
+    "description": "Summary of total resource allocation across all slices",
+    "total_memory": "4G",
+    "total_cpu_quota": "100%",
+    "memory_breakdown": {
+      "root.slice": "4G (container)",
+      "agents.slice": "2G (50%)",
+      "wasm.slice": "512M (12.5%)",
+      "kernel.slice": "1G (25%)",
+      "worker.slice": "1G (25%, sub-slice of agents.slice)"
+    },
+    "cpu_breakdown": {
+      "root.slice": "100% (container)",
+      "agents.slice": "50%",
+      "wasm.slice": "10%",
+      "kernel.slice": "30%",
+      "worker.slice": "40% (sub-slice of agents.slice)"
+    },
+    "notes": [
+      "Memory breakdown shows hierarchical containment (sub-slices are part of parent)",
+      "CPU quotas are relative to system total, not hierarchical",
+      "Total CPU quota can exceed 100% due to time-sharing",
+      "Memory limits are hierarchical (parent >= sum of children)"
+    ]
+  },
+  "conflict_resolutions": {
+    "description": "Resolution of known conflicts from SKILLS.md",
+    "resolutions": [
+      {
+        "conflict": "cgroup v2 pids.max=64 vs Rust tokio thread pool",
+        "reference": "SKILLS.md line 352",
+        "resolution": "Profile actual thread count; set pids.max ≥ (tokio threads + WASM workers + buffer)",
+        "implementation": {
+          "tokio_default_threads": "num_cpus * 2",
+          "recommended_buffer": "4x tokio threads",
+          "formula": "pids.max = (num_cpus * 2) + (num_cpus * 2 * 4) = num_cpus * 10",
+          "example_16_core": "pids.max = 32 + 128 = 160 (rounded to 256 for safety)"
+        }
+      },
+      {
+        "conflict": "WASM memory safety model in kernel space conflicts with Rust ownership",
+        "reference": "SKILLS.md line 342",
+        "resolution": "Use eBPF CO-RE + userspace WASM daemon; do NOT force wasmtime into kernel space",
+        "cgroup_implication": "WASM processes run in userspace cgroup slice (/clawos/wasm.slice)"
+      },
+      {
+        "conflict": "XDP filter vs WASM tool dynamic external HTTP requests",
+        "reference": "SKILLS.md line 353",
+        "resolution": "WASM tool HTTP proxied through host function; no direct network egress",
+        "cgroup_implication": "WASM slice has no network egress; all traffic goes through kernel.slice proxy"
+      }
+    ]
+  },
+  "monitoring_and_alerting": {
+    "description": "cgroup monitoring metrics and alert thresholds",
+    "metrics": [
+      {
+        "name": "memory_usage",
+        "cgroup_file": "memory.current",
+        "alert_threshold": "90%",
+        "critical_threshold": "95%",
+        "description": "Current memory usage vs limit"
+      },
+      {
+        "name": "cpu_usage",
+        "cgroup_file": "cpu.stat",
+        "alert_threshold": "80%",
+        "critical_threshold": "90%",
+        "description": "CPU usage vs quota"
+      },
+      {
+        "name": "pid_count",
+        "cgroup_file": "pids.current",
+        "alert_threshold": "80%",
+        "critical_threshold": "90%",
+        "description": "Current process count vs limit"
+      },
+      {
+        "name": "oom_events",
+        "cgroup_file": "memory.oom_events",
+        "alert_threshold": "1",
+        "critical_threshold": "5",
+        "description": "Count of OOM kill events"
+      }
+    ],
+    "eBPF_integration": {
+      "description": "eBPF programs for cgroup monitoring",
+      "programs": [
+        {
+          "name": "cgroup_memory_monitor",
+          "hook": "cgroup/sock_create",
+          "purpose": "Track memory allocation per cgroup"
+        },
+        {
+          "name": "cgroup_cpu_monitor",
+          "hook": "sched/sched_switch",
+          "purpose": "Track CPU usage per cgroup"
+        },
+        {
+          "name": "cgroup_oom_monitor",
+          "hook": "oom/oom_kill",
+          "purpose": "Alert on OOM events per cgroup"
+        }
+      ]
+    }
+  },
+  "appendix": {
+    "cgroup_v2_reference": {
+      "memory.max": "Sets maximum memory usage. Format: bytes or suffix (K, M, G). 'max' for no limit.",
+      "cpu.max": "Sets CPU quota. Format: 'quota period' in microseconds. 'max' for no limit.",
+      "pids.max": "Sets maximum number of processes. Format: integer or 'max'.",
+      "cpu.weight": "Sets relative CPU priority. Range: 1-10000. Higher = more CPU.",
+      "io.weight": "Sets relative I/O priority. Range: 1-10000. Higher = more I/O.",
+      "memory.swap.max": "Sets swap limit. 0 = disable swap. 'max' = no limit.",
+      "memory.oom.group": "Enables OOM group kill. 1 = kill all processes in cgroup on OOM."
+    },
+    "tokio_thread_pool_calculation": {
+      "default_worker_threads": "num_cpus * 2",
+      "max_blocking_threads": "512",
+      "recommended_pids_max_formula": "pids.max = (worker_threads + max_blocking_threads) * 2",
+      "example_8_core": "worker_threads=16, max_blocking=512, pids.max=(16+512)*2=1056 (rounded to 1024)",
+      "example_16_core": "worker_threads=32, max_blocking=512, pids.max=(32+512)*2=1088 (rounded to 1024)"
+    },
+    "security_considerations": [
+      "Always set memory.swap.max=0 for untrusted workloads (WASM, agents)",
+      "Use memory.oom.group=1 for user workloads to prevent cascading failures",
+      "Set memory.oom.group=0 for kernel services to prevent monitoring loss",
+      "Use cpu.weight and io.weight to prioritize critical services",
+      "Monitor OOM events via eBPF for security incident detection",
+      "Never grant 'max' limits to untrusted workloads"
+    ]
+  },
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-02-24",
+      "changes": [
+        "Initial frozen specification",
+        "Defined cgroup v2 slice hierarchy",
+        "Set resource limits for all slices",
+        "Created IronClaw component quota mapping",
+        "Documented kernel config requirements",
+        "Added JSON Schema for validation",
+        "Generated example configuration files",
+        "Resolved tokio thread pool conflict (pids.max calculation)"
+      ]
+    }
+  ]
+}
