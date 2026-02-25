@@ -15,8 +15,8 @@ ClawOS is an AI-Native Operating System that embeds the IronClaw AI Agent engine
 
 ### Project Statistics
 
-|   Metric                | Value                |
-|-------------------------|----------------------|
+| Metric                  | Value                |
+| ------------------------| ---------------------|
 | **Total Tasks**         | ✅ 47/47 complete    |
 | **Total Phases**        | 4 phases             |
 | **AI Agents**           | 8 specialized agents |
@@ -30,7 +30,7 @@ ClawOS is an AI-Native Operating System that embeds the IronClaw AI Agent engine
 ## Phase Overview
 
 | Phase                | Tasks | Status      | Progress |
-|----------------------|-------| ------------| ---------|
+| ---------------------| ------| ------------| ---------|
 | P1 - Build Standards | 8/8   | ✅ COMPLETE | 100%     |
 | P2 - Build Engine    | 8/8   | ✅ COMPLETE | 100%     |
 | P3 - Fill Data       | 8/8   | ✅ COMPLETE | 100%     |
@@ -45,7 +45,7 @@ ClawOS is an AI-Native Operating System that embeds the IronClaw AI Agent engine
 ### Status: Gate P1 Passed
 
 | ID   | Deliverable              | File                                        | Size | SHA256           |
-|------|--------------------------|---------------------------------------------|------|------------------|
+| -----| -------------------------| --------------------------------------------| -----| -----------------|
 | P1.1 | WIT Interface Spec       | specs/p1/P1.1-wit-interface-spec.md         | 76KB | c2983e...c6398   |
 | P1.2 | seccomp whitelist schema | specs/p1/P1.2-seccomp-whitelist.schema.json | 9KB  | 302faf...3e14de  |
 | P1.3 | eBPF event structs       | specs/p1/P1.3-ebpf-event-structs.md         | 29KB | 8a4180...258c05b |
@@ -64,16 +64,16 @@ ClawOS is an AI-Native Operating System that embeds the IronClaw AI Agent engine
 
 ### Status: All 8 Deliverables Complete
 
-| ID   | Deliverable          | Location                                  | Code        | Key Features                                                    |
-|------|----------------------|-------------------------------------------|-------------|-----------------------------------------------------------------|
-| P2.1 | Kernel Config script | kernel/generate-kernel-config.sh          | 550 lines   | Linux 6.6 LTS .config with all cgroup/eBPF/namespace options    |
-| P2.2 | seccomp-BPF filter   | domains/security/src/seccomp_filter.rs    | 800+ lines  | libseccomp 2.5+, P1.2 schema, conditional rules, P1.7 errors    |
-| P2.3 | eBPF Aya-rs program  | domains/ebpf/src/                         | 851 lines   | Aya-rs 0.13+, CO-RE, 5 event types, tracepoint/LSM/cgroup hooks |
-| P2.4 | Namespace isolator   | domains/security/src/namespace_isolator.rs| 1,000+ lines| User/PID/Mount/Network/UTS, pivot_root, WIT ABI mapping         |
-| P2.5 | Agent Loop service   | domains/core-dev/src/agent_loop_service.rs| 830 lines   | systemd sd_notify, IPC, seccomp, namespace, heartbeat         |
-| P2.6 | WASM Runtime bridge  | domains/wasm/src/                         | 2,200+ lines| wasmtime 27+, 7 WIT interfaces, security, cgroup v2             |
-| P2.7 | ClawFS skeleton      | domains/filesystem/src/                   | 2,400+ lines| SQLite FTS5, HNSW vector skeleton, AES-256-GCM encryption       |
-| P2.8 | AppArmor generator   | domains/security/src/apparmor_generator.rs| 2,192 lines| P1.6 rule language, 3 component profiles, deny rules, tests      |
+| ID   | Deliverable          | Location                                   | Code         | Key Features                                                    |
+| -----| ---------------------| -------------------------------------------| -------------| ----------------------------------------------------------------|
+| P2.1 | Kernel Config script | kernel/generate-kernel-config.sh           | 550 lines    | Linux 6.6 LTS .config with all cgroup/eBPF/namespace options    |
+| P2.2 | seccomp-BPF filter   | domains/security/src/seccomp_filter.rs     | 800+ lines   | libseccomp 2.5+, P1.2 schema, conditional rules, P1.7 errors    |
+| P2.3 | eBPF Aya-rs program  | domains/ebpf/src/                          | 851 lines    | Aya-rs 0.13+, CO-RE, 5 event types, tracepoint/LSM/cgroup hooks |
+| P2.4 | Namespace isolator   | domains/security/src/namespace_isolator.rs | 1,000+ lines | User/PID/Mount/Network/UTS, pivot_root, WIT ABI mapping         |
+| P2.5 | Agent Loop service   | domains/core-dev/src/agent_loop_service.rs | 830 lines    | systemd sd_notify, IPC, seccomp, namespace, heartbeat           |
+| P2.6 | WASM Runtime bridge  | domains/wasm/src/                          | 2,200+ lines | wasmtime 27+, 7 WIT interfaces, security, cgroup v2             |
+| P2.7 | ClawFS skeleton      | domains/filesystem/src/                    | 2,400+ lines | SQLite FTS5, HNSW vector skeleton, AES-256-GCM encryption       |
+| P2.8 | AppArmor generator   | domains/security/src/apparmor_generator.rs | 2,192 lines  | P1.6 rule language, 3 component profiles, deny rules, tests     |
 
 **Total Code:** ~12,850 lines of Rust code (Phase 2: 8/8, Phase 3: 8/8, Phase 4: 8/8 implementations)
 
@@ -83,25 +83,25 @@ ClawOS is an AI-Native Operating System that embeds the IronClaw AI Agent engine
 
 ### Status: All 8 Deliverables Documented
 
-| ID   | Deliverable              | File                                  | Lines    | Description                                           |
-|------|--------------------------|---------------------------------------|----------|-------------------------------------------------------|
-| P3.1 | Tool library migration   | domains/wasm/src/tools.rs            | ~420     | Tool registry, WIT packaging, WASM binary storage        |
-| P3.2 | Channel repackaging      | domains/core-dev/src/channels.rs     | ~130     | SSE/WebSocket interface definitions                   |
-| P3.3 | PG → ClawFS migration    | domains/filesystem/src/migration.rs  | ~330     | SQLite schema, FTS5, HNSW vector index                |
-| P3.4 | Identity initialization  | domains/filesystem/src/identity.rs   | ~396     | Agent state, SHA-256 verification, learned patterns   |
-| P3.5 | Prompt Injection defense | domains/security/src/config.rs       | ~25      | Pattern DB schema, severity classification             |
-| P3.6 | Endpoint allowlist       | domains/security/src/config.rs       | ~35      | LLM providers, TLS verification, rate limiting        |
-| P3.7 | LLM Provider config      | domains/security/src/config.rs       | ~30      | NEAR AI/OpenRouter bridge, API key management         |
-| P3.8 | Secrets key init         | domains/security/src/config.rs       | ~40      | Kernel keyring, TPM 2.0, AES-256-GCM                  |
-|------|--------------------------|---------------------------------------|---------|-------------------------------------------------------|
-| P3.1 | Tool library migration   | docs/P3.1-tool-migration.md           | 41KB    | 19 IronClaw tools to WASM components, WIT packaging   |
-| P3.2 | Channel repackaging      | docs/P3.2-channels-repackaging.md     | 58KB    | Telegram/Slack to WASM, SSE/WebSocket interfaces      |
-| P3.3 | PG → ClawFS migration    | docs/P3.3-postgres-migration.md       | 41KB    | PostgreSQL to SQLite+HNSW schema, migration scripts   |
-| P3.4 | Identity initialization  | docs/P3.4-identity-initialization.md  | Created | Agent state, workspace structure, SHA-256 verification|
-| P3.5 | Prompt Injection defense | docs/P3.5-prompt-injection-defense.md | Created | SQLite schema, pattern matching algorithms            |
-| P3.6 | Endpoint allowlist       | docs/P3.6-endpoint-allowlist.md       | Created | LLM providers, rate limiting, TLS verification        |
-| P3.7 | LLM Provider config      | docs/P3.7-llm-provider-bridge.md      | Created | NEAR AI/OpenRouter bridge, API key management         |
-| P3.8 | Secrets key init         | docs/P3.8-secrets-key-init.md         | Created | Kernel keyring, TPM 2.0 sealing, AES-256-GCM keys     |
+| ID   | Deliverable              | File                                  | Lines   | Description                                            |
+| -----| -------------------------| --------------------------------------| --------| -------------------------------------------------------|
+| P3.1 | Tool library migration   | domains/wasm/src/tools.rs             | ~420    | Tool registry, WIT packaging, WASM binary storage      |
+| P3.2 | Channel repackaging      | domains/core-dev/src/channels.rs      | ~130    | SSE/WebSocket interface definitions                    |
+| P3.3 | PG → ClawFS migration    | domains/filesystem/src/migration.rs   | ~330    | SQLite schema, FTS5, HNSW vector index                 |
+| P3.4 | Identity initialization  | domains/filesystem/src/identity.rs    | ~396    | Agent state, SHA-256 verification, learned patterns    |
+| P3.5 | Prompt Injection defense | domains/security/src/config.rs        | ~25     | Pattern DB schema, severity classification             |
+| P3.6 | Endpoint allowlist       | domains/security/src/config.rs        | ~35     | LLM providers, TLS verification, rate limiting         |
+| P3.7 | LLM Provider config      | domains/security/src/config.rs        | ~30     | NEAR AI/OpenRouter bridge, API key management          |
+| P3.8 | Secrets key init         | domains/security/src/config.rs        | ~40     | Kernel keyring, TPM 2.0, AES-256-GCM                   |
+| -----| -------------------------| --------------------------------------| --------| -------------------------------------------------------|
+| P3.1 | Tool library migration   | docs/P3.1-tool-migration.md           | 41KB    | 19 IronClaw tools to WASM components, WIT packaging    |
+| P3.2 | Channel repackaging      | docs/P3.2-channels-repackaging.md     | 58KB    | Telegram/Slack to WASM, SSE/WebSocket interfaces       |
+| P3.3 | PG → ClawFS migration    | docs/P3.3-postgres-migration.md       | 41KB    | PostgreSQL to SQLite+HNSW schema, migration scripts    |
+| P3.4 | Identity initialization  | docs/P3.4-identity-initialization.md  | Created | Agent state, workspace structure, SHA-256 verification |
+| P3.5 | Prompt Injection defense | docs/P3.5-prompt-injection-defense.md | Created | SQLite schema, pattern matching algorithms             |
+| P3.6 | Endpoint allowlist       | docs/P3.6-endpoint-allowlist.md       | Created | LLM providers, rate limiting, TLS verification         |
+| P3.7 | LLM Provider config      | docs/P3.7-llm-provider-bridge.md      | Created | NEAR AI/OpenRouter bridge, API key management          |
+| P3.8 | Secrets key init         | docs/P3.8-secrets-key-init.md         | Created | Kernel keyring, TPM 2.0 sealing, AES-256-GCM keys      |
 
 **Total:** 8 documents, 140+ KB
 
@@ -111,25 +111,25 @@ ClawOS is an AI-Native Operating System that embeds the IronClaw AI Agent engine
 
 ### Status: All 8 Deliverables Documented
 
-| ID   | Deliverable               | File                                 | Lines  | Description                                           |
-|------|---------------------------|------------------------------------|--------|-------------------------------------------------------|
-| P4.1 | seccomp whitelist pruning | domains/security/src/seccomp_calibrator.rs | ~110   | strace analysis, syscall profiler, pruning recommendations      |
-| P4.2 | cgroup calibration        | domains/infra/src/calibration.rs       | ~70    | Benchmark, OOM testing, >=80%% baseline                    |
-| P4.3 | eBPF Ring Buffer tuning   | domains/observability/src/calibration.rs | ~185   | Ring buffer sizing, event loss detection, adaptive algorithms   |
-| P4.4 | WASM memory/CPU tuning    | domains/observability/src/calibration.rs | (in combined) | 256M memory, 5%% CPU limits, workload benchmarks      |
-| P4.5 | ClawFS HNSW tuning        | domains/observability/src/calibration.rs | (in combined) | ef_construction, M parameters, vector dimensions       |
-| P4.6 | AppArmor refinement       | domains/observability/src/calibration.rs | (in combined) | complain mode testing, violations tracking               |
-| P4.7 | XDP performance test      | domains/observability/src/calibration.rs | (in combined) | packet/s baseline, TCP:5432 filtering, latency metrics   |
-| P4.8 | Integration test          | domains/observability/src/calibration.rs | (in combined) | Security Report template, comprehensive validation       |
-|------|---------------------------|------------------------------------------|-------------------------------------------------------|
-| P4.1 | seccomp whitelist pruning | docs/P4.1-seccomp-pruning.md             | strace analysis, syscall profiling, pruning algorithm |
-| P4.2 | cgroup calibration        | docs/P4.2-cgroup-calibration.md          | Benchmark methodology, OOM testing, >=80% baseline    |
-| P4.3 | eBPF Ring Buffer tuning   | docs/P4.3-ebpf-ringbuffer-tuning.md      | Sizing, event loss detection, adaptive algorithms     |
-| P4.4 | WASM memory/CPU tuning    | docs/P4.4-wasm-tuning.md                 | 256M memory, 5% CPU, workload benchmarks              |
-| P4.5 | ClawFS HNSW tuning        | docs/P4.5-clawfs-hnsw-tuning.md          | ef_construction, M values, 1536/3072 dimensions       |
-| P4.6 | AppArmor refinement       | docs/P4.6-apparmor-refinement.md         | complain mode testing, deny rule analysis             |
-| P4.7 | XDP performance test      | docs/P4.7-xdp-performance.md             | packet/s baseline, TCP:5432 filtering                 |
-| P4.8 | Integration test          | docs/P4.8-integration-security-report.md | Cross-domain testing, Security Report template        |
+| ID   | Deliverable               | File                                       | Lines                                                 | Description                                                   |
+| -----| --------------------------| -------------------------------------------| ------------------------------------------------------| --------------------------------------------------------------|
+| P4.1 | seccomp whitelist pruning | domains/security/src/seccomp_calibrator.rs | ~110                                                  | strace analysis, syscall profiler, pruning recommendations    |
+| P4.2 | cgroup calibration        | domains/infra/src/calibration.rs           | ~70                                                   | Benchmark, OOM testing, >=80%% baseline                       |
+| P4.3 | eBPF Ring Buffer tuning   | domains/observability/src/calibration.rs   | ~185                                                  | Ring buffer sizing, event loss detection, adaptive algorithms |
+| P4.4 | WASM memory/CPU tuning    | domains/observability/src/calibration.rs   | (in combined)                                         | 256M memory, 5%% CPU limits, workload benchmarks              |
+| P4.5 | ClawFS HNSW tuning        | domains/observability/src/calibration.rs   | (in combined)                                         | ef_construction, M parameters, vector dimensions              |
+| P4.6 | AppArmor refinement       | domains/observability/src/calibration.rs   | (in combined)                                         | complain mode testing, violations tracking                    |
+| P4.7 | XDP performance test      | domains/observability/src/calibration.rs   | (in combined)                                         | packet/s baseline, TCP:5432 filtering, latency metrics        |
+| P4.8 | Integration test          | domains/observability/src/calibration.rs   | (in combined)                                         | Security Report template, comprehensive validation            |
+| -----| --------------------------| -------------------------------------------| ------------------------------------------------------|
+| P4.1 | seccomp whitelist pruning | docs/P4.1-seccomp-pruning.md               | strace analysis, syscall profiling, pruning algorithm |
+| P4.2 | cgroup calibration        | docs/P4.2-cgroup-calibration.md            | Benchmark methodology, OOM testing, >=80% baseline    |
+| P4.3 | eBPF Ring Buffer tuning   | docs/P4.3-ebpf-ringbuffer-tuning.md        | Sizing, event loss detection, adaptive algorithms     |
+| P4.4 | WASM memory/CPU tuning    | docs/P4.4-wasm-tuning.md                   | 256M memory, 5% CPU, workload benchmarks              |
+| P4.5 | ClawFS HNSW tuning        | docs/P4.5-clawfs-hnsw-tuning.md            | ef_construction, M values, 1536/3072 dimensions       |
+| P4.6 | AppArmor refinement       | docs/P4.6-apparmor-refinement.md           | complain mode testing, deny rule analysis             |
+| P4.7 | XDP performance test      | docs/P4.7-xdp-performance.md               | packet/s baseline, TCP:5432 filtering                 |
+| P4.8 | Integration test          | docs/P4.8-integration-security-report.md   | Cross-domain testing, Security Report template        |
 
 **Total:** 8 calibration implementations (~360 lines total)
 
@@ -152,7 +152,7 @@ Layer 1  Hardware Trust     TPM 2.0 + Secure Boot + eBPF JIT + MODULE_SIG_FORCE
 ### Agent Roster (8 Agents)
 
 | Agent                   | Responsibility                              | Code Produced                   |
-|-------------------------|---------------------------------------------|---------------------------------|
+| ------------------------| --------------------------------------------| --------------------------------|
 | Kernel Engineer         | Linux Kernel config, compilation            | P2.1 (+2,500 lines)             |
 | eBPF Agent              | eBPF kernel programs, userspace receivers   | P2.3 (+851 lines)               |
 | Security Agent          | seccomp, AppArmor, namespace isolation      | P2.2, P2.4, P2.8 (+3,300 lines) |
@@ -167,7 +167,7 @@ Layer 1  Hardware Trust     TPM 2.0 + Secure Boot + eBPF JIT + MODULE_SIG_FORCE
 ## 📊 Code Distribution by Domain
 
 | Domain         | Files   | Lines       | Percentage |
-|----------------|---------|-------------|------------|
+| ---------------| --------| ------------| -----------|
 | security       | 5 files | 3,800 lines | 35%        |
 | wasm           | 6 files | 2,200 lines | 20%        |
 | filesystem     | 5 files | 2,400 lines | 22%        |
@@ -288,12 +288,12 @@ ClawOS/
 
 ## 🎯 Gates Status
 
-| Gate    | Requirement                                | Status                     |
-|---------|--------------------------------------------|----------------------------|
-| Gate P1 | All specs SHA256 signed                    | ✅ PASSED                  |
-| Gate P2 | cargo build --release, clippy zero warnings| ⏳ PENDING (requires Linux)|
-| Gate P3 | cargo test, security audit 100%            | ⏳ PENDING                 |
-| Gate P4 | Security Report zero CRITICAL, perf ≥ 80%  | ⏳ PENDING                 |
+| Gate    | Requirement                                 | Status                     |
+| --------| --------------------------------------------| ---------------------------|
+| Gate P1 | All specs SHA256 signed                     | ✅ PASSED                   |
+| Gate P2 | cargo build --release, clippy zero warnings | ⏳ PENDING (requires Linux) |
+| Gate P3 | cargo test, security audit 100%             | ⏳ PENDING                  |
+| Gate P4 | Security Report zero CRITICAL, perf ≥ 80%   | ⏳ PENDING                  |
 
 ---
 
@@ -311,7 +311,7 @@ ClawOS/
 ## ⚙️ Technology Stack (Locked Versions)
 
 | Technology   | Version  | Purpose                  |
-|--------------|----------|--------------------------|
+| -------------| ---------| -------------------------|
 | Linux Kernel | 6.6 LTS  | Main kernel (eBPF + BTF) |
 | Rust         | 1.85+    | Core development         |
 | aya-rs       | 0.13+    | eBPF framework           |

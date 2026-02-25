@@ -14,48 +14,48 @@ This eBPF agent provides kernel-level monitoring for ClawOS with the following c
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Userspace (Rust)                        │
+┌────────────────────────────────────────────────────────────┐
+│                     Userspace (Rust)                       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │   main.rs    │  │  events.rs   │  │  Config      │      │
 │  │  (Loader)    │  │  (Structs)   │  │  (Settings)  │      │
 │  └──────┬───────┘  └──────────────┘  └──────────────┘      │
-│         │                                                     │
-│         │ Ring Buffer (1MB)                                  │
-│         │                                                     │
-└─────────┼─────────────────────────────────────────────────────┘
+│         │                                                  │
+│         │ Ring Buffer (1MB)                                │
+│         │                                                  │
+└─────────┼──────────────────────────────────────────────────┘
           │
           │ eBPF System Calls
           │
-┌─────────┼─────────────────────────────────────────────────────┐
-│         │              Kernel Space (eBPF)                    │
+┌─────────┼──────────────────────────────────────────────────┐
+│         │              Kernel Space (eBPF)                 │
 │  ┌──────▼───────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │ main.bpf.rs  │  │  events.rs   │  │  Maps        │      │
 │  │ (eBPF Progs) │  │  (Structs)   │  │  (Storage)   │      │
 │  └──────┬───────┘  └──────────────┘  └──────────────┘      │
-│         │                                                     │
-│  ┌──────▼──────────────────────────────────────────────┐    │
-│  │                   Hooks                              │    │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │    │
-│  │  │ Tracepoint  │  │     LSM     │  │   Cgroup    │ │    │
-│  │  │  execve     │  │  file_open  │  │   skb_*     │ │    │
-│  │  │  openat     │  │  socket_*   │  │             │ │    │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘ │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+│         │                                                  │
+│  ┌──────▼──────────────────────────────────────────────┐   │
+│  │                   Hooks                             │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │   │
+│  │  │ Tracepoint  │  │     LSM     │  │   Cgroup    │  │   │
+│  │  │  execve     │  │  file_open  │  │   skb_*     │  │   │
+│  │  │  openat     │  │  socket_*   │  │             │  │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  │   │
+│  └─────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ## Event Structures
 
 All event structures follow the P1.3 specification:
 
-| Event Type | Size | Description |
-|------------|------|-------------|
-| AnomalyEvent | 1056 bytes | Security and monitoring alerts |
-| SyscallTraceEvent | 104 bytes | System call tracing |
-| FileAccessEvent | 304 bytes | File access monitoring |
-| NetworkEvent | 72 bytes | Network activity monitoring |
-| CgroupEvent | 304 bytes | Cgroup resource monitoring |
+| Event Type        | Size       | Description                    |
+| ------------------| -----------| -------------------------------|
+| AnomalyEvent      | 1056 bytes | Security and monitoring alerts |
+| SyscallTraceEvent | 104 bytes  | System call tracing            |
+| FileAccessEvent   | 304 bytes  | File access monitoring         |
+| NetworkEvent      | 72 bytes   | Network activity monitoring    |
+| CgroupEvent       | 304 bytes  | Cgroup resource monitoring     |
 
 ## Building
 
@@ -94,15 +94,15 @@ sudo ./target/release/clawos-ebpf --iface eth1
 
 The eBPF agent can be configured via the `CONFIG` map:
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| enable_syscall_tracing | u8 | 1 | Enable syscall monitoring |
-| enable_file_monitoring | u8 | 1 | Enable file access monitoring |
-| enable_network_monitoring | u8 | 1 | Enable network monitoring |
-| enable_cgroup_monitoring | u8 | 1 | Enable cgroup monitoring |
-| syscall_anomaly_threshold | u32 | 1000 | Syscall anomaly threshold |
-| file_access_violation_mode | u8 | 1 | File access violation mode |
-| network_suspicious_threshold | u32 | 100 | Network suspicious threshold |
+| Field                        | Type | Default | Description                   |
+| -----------------------------| -----| --------| ------------------------------|
+| enable_syscall_tracing       | u8   | 1       | Enable syscall monitoring     |
+| enable_file_monitoring       | u8   | 1       | Enable file access monitoring |
+| enable_network_monitoring    | u8   | 1       | Enable network monitoring     |
+| enable_cgroup_monitoring     | u8   | 1       | Enable cgroup monitoring      |
+| syscall_anomaly_threshold    | u32  | 1000    | Syscall anomaly threshold     |
+| file_access_violation_mode   | u8   | 1       | File access violation mode    |
+| network_suspicious_threshold | u32  | 100     | Network suspicious threshold  |
 
 ## CO-RE Support
 

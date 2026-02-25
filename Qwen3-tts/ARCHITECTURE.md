@@ -14,20 +14,20 @@
 │  🎙  麥克風                                                      │
 │   │                                                             │
 │   ▼                                                             │
-│  [VAD]  ── 靜音就跳過，偵測到語音才往下送                          │
+│  [VAD] 靜音就跳過，偵測到語音才往下送                               │
 │   │                                                             │
 │   ▼                                                             │
-│  [ASR: 台語辨識]  ── Whisper-TW fine-tune / CLiFT-ASR           │
-│   │    文字                                                     │
+│  [ASR: 台語辨識]  ── Whisper-TW fine-tune / CLiFT-ASR            │
+│   │    文字                                                      │
 │   ▼                                                             │
-│  [意圖解析 + Agent]  ── Qwen3 LLM (本地 or API)                  │
+│  [意圖解析 + Agent]  ── Qwen3 LLM (本地 or API)                   │
 │   │    指令/回應                                                 │
 │   ├──────────────────────────────────┐                          │
 │   ▼                                  ▼                          │
 │  [IronClaw API]              [TTS: Qwen3-TTS 台語]              │
-│   │ 執行安全指令                     │ 語音回應                  │
+│   │ 執行安全指令                     │ 語音回應                   │
 │   ▼                                  ▼                          │
-│  [Kernel / 系統層]               🔊 喇叭                        │
+│  [Kernel / 系統層]               🔊 喇叭                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -225,7 +225,7 @@ impl VadDetector {
 pub async fn run(tx: mpsc::Sender<AudioChunk>, config: VadConfig) -> anyhow::Result<()> {
     let host = cpal::default_host();
     let device = host.default_input_device()
-        .ok_or_else(|| anyhow::anyhow!("找不到麥克風"))?;
+|  |
     
     let vad = VadDetector::new(&config.model_path)?;
     let mut buffer: Vec<f32> = Vec::new();
@@ -581,13 +581,13 @@ audit_log_path = "/var/log/ironclaw/voice_audit.log"
 
 ```
 ┌─────────────────────────────────────────────┐
-│            IronClaw 主機                     │
+│            IronClaw Host                    │
 │                                             │
 │  ┌─────────────────────────────────┐        │
-│  │     ironclaw-voice (Rust)        │        │
-│  │  voice-daemon  (主進程)          │        │
+│  │     ironclaw-voice (Rust)       │        │
+│  │  voice-daemon  (main thread)    │        │
 │  └────────────┬────────────────────┘        │
-│               │ Unix Socket / HTTP           │
+│               │ Unix Socket / HTTP          │
 │  ┌────────────┴────────────────────┐        │
 │  │  Python 微服務（AI 模型）         │        │
 │  │  ├─ ASR: Whisper-TW (port 8765) │        │
@@ -600,7 +600,7 @@ audit_log_path = "/var/log/ironclaw/voice_audit.log"
 │  └─────────────────────────────────┘        │
 │               │                             │
 │  ┌────────────┴────────────────────┐        │
-│  │  IronClaw 核心 (既有架構)         │        │
+│  │  IronClaw 核心 (既有架構)        │        │
 │  │  ├─ Kernel Module               │        │
 │  │  ├─ Security Policy Engine      │        │
 │  │  └─ Audit Subsystem             │        │
@@ -612,17 +612,17 @@ audit_log_path = "/var/log/ironclaw/voice_audit.log"
 
 ## 八、開發里程碑
 
-| 階段 | 內容 | 工具 |
-|------|------|------|
-| M1 | 麥克風捕捉 + VAD | cpal + silero-vad |
-| M2 | 台語 ASR 接通 | Whisper-TW REST |
-| M3 | LLM Agent 基本對話 | Qwen3 + ollama |
-| M4 | IronClaw 橋接（唯讀） | Unix Socket IPC |
-| M5 | Qwen3-TTS 台語回應 | Qwen API 串流 |
-| M6 | 工具呼叫（查狀態） | Function calling |
-| M7 | 聲紋驗證 | ECAPA-TDNN |
-| M8 | 高風險操作 + 審計日誌 | IronClaw 審計系統 |
-| M9 | 本地 TTS（離線） | Qwen3-TTS-0.6B 本地 |
+| 階段 | 內容                | 工具               |
+| ----| --------------------| ------------------|
+| M1  | 麥克風捕捉 + VAD     | cpal + silero-vad |
+| M2  | 台語 ASR 接通        | Whisper-TW REST   |
+| M3  | LLM Agent 基本對話   | Qwen3 + ollama    |
+| M4  | IronClaw 橋接（唯讀） | Unix Socket IPC   |
+| M5  | Qwen3-TTS 台語回應   | Qwen API 串流       |
+| M6  | 工具呼叫（查狀態）    | Function calling  |
+| M7  | 聲紋驗證             | ECAPA-TDNN        |
+| M8  | 高風險操作 + 審計日誌 | IronClaw 審計系統     |
+| M9  | 本地 TTS（離線）      | Qwen3-TTS-0.6B 本地 |
 
 ---
 

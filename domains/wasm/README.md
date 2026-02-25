@@ -2,30 +2,32 @@
 
 ## Overview
 
-The WASM Runtime bridge is a userspace daemon that connects WASM tools to the Linux Kernel 6.6 LTS ABI via the WIT (WebAssembly Interface Types) interface defined in P1.1.
+The WASM Runtime bridge is a userspace daemon that connects WASM tools to 
+the Linux Kernel 6.6 LTS ABI via the WIT (WebAssembly Interface Types) 
+interface defined in P1.1.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ WASM Component (Tool)                                        │
-│ - Memory: 256MB (configurable)                               │
-│ - CPU: 5% via cgroup v2                                      │
+│ WASM Component (Tool)                                       │
+│ - Memory: 256MB (configurable)                              │
+│ - CPU: 5% via cgroup v2                                     │
 │ - Network: Proxied through host functions                   │
 └────────────────────┬────────────────────────────────────────┘
                      │ WIT Interface (wasm32 ABI)
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Userspace Daemon (clawos-wasm-bridge)                       │
-│ - wasmtime 27+ runtime                                       │
-│ - WIT host function implementations                          │
-│ - seccomp filter applied                                     │
+│ - wasmtime 27+ runtime                                      │
+│ - WIT host function implementations                         │
+│ - seccomp filter applied                                    │
 │ - cgroup v2 resource limits                                 │
 └────────────────────┬────────────────────────────────────────┘
                      │ POSIX Syscalls
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Linux Kernel 6.6 LTS                                         │
+│ Linux Kernel 6.6 LTS                                        │
 │ - eBPF LSM hooks (monitoring)                               │
 │ - AppArmor profiles (enforcement)                           │
 │ - Namespace isolation (user, pid, net, mnt)                 │
@@ -128,19 +130,19 @@ The bridge implements all host functions from P1.1 WIT specification:
 
 All errors map to P1.7 error codes:
 
-| Code | Name | Description |
-|------|------|-------------|
-| 0 | SUCCESS | Operation completed successfully |
-| 1 | EAGAIN | Operation would block |
-| 2 | EIO | I/O error |
-| 3 | ENOENT | Entity not found |
-| 4 | EPERM | Permission denied |
-| 5 | EPROTO | Protocol error |
-| 6 | ETIMEOUT | Operation timeout |
-| 7 | EINTERNAL | Internal error (should be logged) |
-| 8 | EPANIC | Unrecoverable error (trigger rollback) |
-| 100-105 | WASM errors | WASM-specific errors |
-| 200-209 | ClawOS errors | ClawOS-specific errors |
+| Code    | Name          | Description                            |
+| --------| --------------| ---------------------------------------|
+| 0       | SUCCESS       | Operation completed successfully       |
+| 1       | EAGAIN        | Operation would block                  |
+| 2       | EIO           | I/O error                              |
+| 3       | ENOENT        | Entity not found                       |
+| 4       | EPERM         | Permission denied                      |
+| 5       | EPROTO        | Protocol error                         |
+| 6       | ETIMEOUT      | Operation timeout                      |
+| 7       | EINTERNAL     | Internal error (should be logged)      |
+| 8       | EPANIC        | Unrecoverable error (trigger rollback) |
+| 100-105 | WASM errors   | WASM-specific errors                   |
+| 200-209 | ClawOS errors | ClawOS-specific errors                 |
 
 ## Resource Limits (P1.5)
 

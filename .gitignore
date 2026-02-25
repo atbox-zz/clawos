@@ -28,3 +28,4 @@ session-*.md
 *.tmp
 *.bak
 *.log
+.env

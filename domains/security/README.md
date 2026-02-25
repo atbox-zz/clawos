@@ -114,17 +114,17 @@ SyscallRule {
 
 The library uses P1.7 IPC protocol error codes:
 
-| Code | Name | Description |
-|------|------|-------------|
-| 0 | SUCCESS | Operation completed successfully |
-| 1 | EAGAIN | Operation would block |
-| 2 | EIO | I/O error |
-| 3 | ENOENT | Entity not found |
-| 4 | EPERM | Permission denied |
-| 5 | EPROTO | Protocol error |
-| 6 | ETIMEOUT | Operation timeout |
-| 7 | EINTERNAL | Internal error |
-| 8 | EPANIC | Unrecoverable error |
+| Code | Name      | Description                      |
+| -----| ----------| ---------------------------------|
+| 0    | SUCCESS   | Operation completed successfully |
+| 1    | EAGAIN    | Operation would block            |
+| 2    | EIO       | I/O error                        |
+| 3    | ENOENT    | Entity not found                 |
+| 4    | EPERM     | Permission denied                |
+| 5    | EPROTO    | Protocol error                   |
+| 6    | ETIMEOUT  | Operation timeout                |
+| 7    | EINTERNAL | Internal error                   |
+| 8    | EPANIC    | Unrecoverable error              |
 
 ## Testing
 

@@ -57,12 +57,12 @@ This migration replaces IronClaw's PostgreSQL + pgvector setup with embedded SQL
 
 ### Schema Mapping
 
-| PostgreSQL | SQLite |
-|------------|--------|
-| `documents` table | `documents` FTS5 virtual table |
+| PostgreSQL                 | SQLite                               |
+| ---------------------------| -------------------------------------|
+| `documents` table          | `documents` FTS5 virtual table       |
 | `vectors` table (pgvector) | `vectors` table + HNSW virtual table |
-| `metadata` JSONB column | `metadata` TEXT column (JSON) |
-| `embedding` vector(1536) | `embedding` BLOB (Float32 array) |
+| `metadata` JSONB column    | `metadata` TEXT column (JSON)        |
+| `embedding` vector(1536)   | `embedding` BLOB (Float32 array)     |
 
 ### Migration Steps
 
@@ -140,12 +140,12 @@ If migration fails:
 
 ### Deprecation Timeline
 
-| Phase | Status |
-|-------|--------|
-| P1-P2 | PostgreSQL still used (IronClaw compatibility) |
-| P3 (E-02) | Migration to SQLite + HNSW |
-| P3 (E-03) | PostgreSQL removed from codebase |
-| P4 | PostgreSQL dependency fully deprecated |
+| Phase     | Status                                         |
+| ----------| -----------------------------------------------|
+| P1-P2     | PostgreSQL still used (IronClaw compatibility) |
+| P3 (E-02) | Migration to SQLite + HNSW                     |
+| P3 (E-03) | PostgreSQL removed from codebase               |
+| P4        | PostgreSQL dependency fully deprecated         |
 
 ## Usage
 

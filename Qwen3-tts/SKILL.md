@@ -94,7 +94,7 @@ use anyhow::{Context, Result};
 
 fn read_config(path: &str) -> Result<String> {
     std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read config from {path}"))
+|  |
 }
 
 fn main() -> Result<()> {
@@ -131,7 +131,7 @@ pub fn find_user(id: u64) -> Result<User, AppError> {
 fn process() -> Result<(), AppError> {
     let data = std::fs::read_to_string("data.txt")?;  // auto-converts io::Error
     let parsed: u32 = data.trim().parse()
-        .map_err(|e| AppError::Parse { line: 1, msg: e.to_string() })?;
+| e |
     println!("Parsed: {parsed}");
     Ok(())
 }
@@ -241,7 +241,7 @@ async fn run_parallel() -> Result<()> {
 // Spawning tasks
 async fn spawn_tasks() {
     let handles: Vec<_> = (0..4)
-        .map(|i| tokio::spawn(async move {
+| i |
             sleep(Duration::from_millis(100 * i)).await;
             i * i
         }))
@@ -262,8 +262,8 @@ async fn spawn_tasks() {
 let numbers = vec![1, 2, 3, 4, 5];
 
 let result: Vec<i32> = numbers.iter()
-    .filter(|&&x| x % 2 == 0)
-    .map(|&x| x * x)
+| &&x |
+| &x  |
     .collect();
 
 // HashMap
@@ -391,22 +391,22 @@ mod tests {
 
 ## Common Crates Reference
 
-| Category | Crate | Use Case |
-|---|---|---|
-| Error handling | `anyhow` | Applications |
-| Error handling | `thiserror` | Libraries |
-| Serialization | `serde` + `serde_json` | JSON/TOML/etc |
-| Async runtime | `tokio` | Async I/O |
-| HTTP client | `reqwest` | REST APIs |
-| HTTP server | `axum` | Web APIs |
-| CLI | `clap` | Argument parsing |
-| Logging | `tracing` | Structured logging |
-| Database | `sqlx` | Async SQL |
-| Regex | `regex` | Pattern matching |
-| Parallelism | `rayon` | Data parallelism |
-| Random | `rand` | RNG |
-| Time | `chrono` | Date/time |
-| UUID | `uuid` | UUID generation |
+| Category       | Crate                  | Use Case           |
+| ---------------| -----------------------| -------------------|
+| Error handling | `anyhow`               | Applications       |
+| Error handling | `thiserror`            | Libraries          |
+| Serialization  | `serde` + `serde_json` | JSON/TOML/etc      |
+| Async runtime  | `tokio`                | Async I/O          |
+| HTTP client    | `reqwest`              | REST APIs          |
+| HTTP server    | `axum`                 | Web APIs           |
+| CLI            | `clap`                 | Argument parsing   |
+| Logging        | `tracing`              | Structured logging |
+| Database       | `sqlx`                 | Async SQL          |
+| Regex          | `regex`                | Pattern matching   |
+| Parallelism    | `rayon`                | Data parallelism   |
+| Random         | `rand`                 | RNG                |
+| Time           | `chrono`               | Date/time          |
+| UUID           | `uuid`                 | UUID generation    |
 
 ---
 
