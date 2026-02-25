@@ -2,7 +2,7 @@
 name = "clawos-security"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.80"
 authors = ["ClawOS Project"]
 license = "Apache-2.0 OR MIT"
 description = "Security primitives for ClawOS: seccomp-BPF filtering, namespace isolation, and AppArmor integration"
