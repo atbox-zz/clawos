@@ -47,6 +47,8 @@ tracing = "0.1"
 tempfile = "3.8"
 
 [features]
+default = []
+hnsw = ["usearch"]
 default = ["hnsw"]
 hnsw = ["usearch"]
 full-encryption = []

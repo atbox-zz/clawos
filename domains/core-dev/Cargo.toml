@@ -75,6 +75,10 @@ mockall = "0.12"
 [features]
 default = ["metrics", "clawfs"]
 metrics = ["dep:prometheus"]
+clawfs = ["dep:rusqlite"]
+tokio-console = ["tokio/tracing"]
+default = ["metrics", "clawfs"]
+metrics = ["dep:prometheus"]
 clawfs = ["dep:rusqlite", "dep:usearch"]
 tokio-console = ["tokio/tracing"]
 
