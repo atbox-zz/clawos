@@ -12,7 +12,7 @@ categories = ["os::linux-apis", "command-line-utilities"]
 [dependencies]
 # Domain crates (workspace members)
 clawos-security = { path = "../domains/security", optional = true }
-clawos-ebpf = { path = "../domains/ebpf", optional = true }
+# clawos-ebpf = { path = "../domains/ebpf", optional = true }
 clawos-wasm = { path = "../domains/wasm", optional = true }
 clawos-filesystem = { path = "../domains/filesystem", package = "clawfs", optional = true }
 clawos-core-dev = { path = "../domains/core-dev", optional = true }
