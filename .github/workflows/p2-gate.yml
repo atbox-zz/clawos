@@ -1,6 +1,9 @@
 name: P2 Gate
 
 on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
   workflow_dispatch:
   push:
     branches: [ main, develop ]
