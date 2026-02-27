@@ -220,7 +220,9 @@ impl SeccompFilter {
     }
 
     fn build(&mut self) -> SecurityResult<()> {
-        for rule in &self.whitelist.syscalls {
+        // Collect rules to avoid borrow checker issue
+        let rules: Vec<SyscallRule> = self.whitelist.syscalls.clone();
+        for rule in &rules {
             match rule.permission {
                 Permission::Allow => self.add_allow_rule(rule)?,
                 Permission::Deny => self.add_deny_rule(rule)?,

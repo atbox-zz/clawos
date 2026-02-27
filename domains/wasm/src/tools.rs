@@ -1,4 +1,4 @@
-use crate::error::BridgeError;
+use crate::error::{BridgeError, ErrorCode};
 use crate::resource::FileDescriptor;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

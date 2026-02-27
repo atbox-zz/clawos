@@ -24,6 +24,7 @@
 use libc::{c_char, c_int, c_void, pid_t, size_t};
 use nix::unistd::pivot_root;
 use std::ffi::{CStr, CString};
+use std::fs;
 use std::fs::OpenOptions;
 use std::io::{self, Read, Write};
 use std::os::unix::io::RawFd;
@@ -425,14 +426,7 @@ impl NamespaceIsolator {
         })?;
 
         // Call pivot_root syscall
-        let new_root_c = CString::new(new_root).map_err(|e| {
-            SecurityError::Internal(format!("Failed to create CString: {}", e))
-        })?;
-        let put_old_c = CString::new(put_old).map_err(|e| {
-            SecurityError::Internal(format!("Failed to create CString: {}", e))
-        })?;
-
-        pivot_root(new_root_c.as_ptr(), put_old_c.as_ptr())
+        pivot_root(new_root, put_old)
             .map_err(|e| SecurityError::Internal(format!("Failed to pivot_root: {}", e)))?;
 
         // Change current directory to /

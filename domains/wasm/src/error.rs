@@ -83,6 +83,7 @@ impl ErrorCode {
             libc::EMSGSIZE => ErrorCode::EMSGSIZE,
             libc::EADDRINUSE => ErrorCode::EADDRINUSE,
             libc::EADDRNOTAVAIL => ErrorCode::EADDRNOTAVAIL,
+            libc::EBADF => ErrorCode::EBADF,
             _ => ErrorCode::EInternal,
         }
     }
@@ -117,6 +118,7 @@ impl ErrorCode {
             ErrorCode::EMSGSIZE => libc::EMSGSIZE,
             ErrorCode::EADDRINUSE => libc::EADDRINUSE,
             ErrorCode::EADDRNOTAVAIL => libc::EADDRNOTAVAIL,
+            ErrorCode::EBADF => libc::EBADF,
             ErrorCode::WasmAllocFailed => libc::ENOMEM,
             ErrorCode::WasmStackOverflow => libc::ENOMEM,
             ErrorCode::WasmTrap => libc::EFAULT,
@@ -165,6 +167,7 @@ impl ErrorCode {
             ErrorCode::EMSGSIZE => "EMSGSIZE",
             ErrorCode::EADDRINUSE => "EADDRINUSE",
             ErrorCode::EADDRNOTAVAIL => "EADDRNOTAVAIL",
+            ErrorCode::EBADF => "EBADF",
             ErrorCode::WasmAllocFailed => "WASM_ALLOC_FAILED",
             ErrorCode::WasmStackOverflow => "WASM_STACK_OVERFLOW",
             ErrorCode::WasmTrap => "WASM_TRAP",
