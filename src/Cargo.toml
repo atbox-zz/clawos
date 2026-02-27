@@ -44,11 +44,11 @@ tempfile = "3.12"
 [features]
 default = []
 security = ["dep:clawos-security"]
-ebpf = ["dep:clawos-ebpf"]
+# ebpf = ["dep:clawos-ebpf"]
 wasm = ["dep:clawos-wasm"]
 filesystem = ["dep:clawos-filesystem"]
 core-dev = ["dep:clawos-core-dev"]
-full = ["security", "ebpf", "wasm", "filesystem", "core-dev"]
+# full = ["security", "ebpf", "wasm", "filesystem", "core-dev"]
 
 [[bin]]
 name = "clawos"
