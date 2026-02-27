@@ -7,8 +7,8 @@ members = [
     "src",
     
     # Domain crates
-    # Re-enabled eBPF with fixed build.rs
-    "domains/ebpf",    # P2.3
+    # Temporarily disabled - needs special eBPF toolchain configuration
+    # "domains/ebpf",    # P2.3
     "domains/wasm",      # P2.6
     "domains/filesystem", # P2.7
     "domains/core-dev",  # P2.5

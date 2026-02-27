@@ -481,7 +481,7 @@ frozen_spec_deps:
 | W17–18 | P4      | Security Report generated, perf baseline     | `security-report-*.txt`             |
 | W19–20 | P4      | Buildroot image, ISO build                   | `clawos-v0.1.0.iso`                 |
 | W21–22 | Release | QEMU validation, x86_64 + aarch64 test       | QA test report                      |
-| W23–24 | Release | **ClawOS v0.1.0 Alpha Release** 🎯            | GitHub Release, CHANGELOG          |
+| W23–24 | Release | **ClawOS v0.1.0 Alpha Release**🎯            | GitHub Release, CHANGELOG           |
 
 ---
 
