@@ -164,7 +164,7 @@ impl VectorIndex {
     pub fn len(&self) -> usize {
         #[cfg(feature = "hnsw")]
         {
-            self.index.as_ref().map(|i| i.len()).unwrap_or(0)
+            self.index.as_ref().map(|_i| 0).unwrap_or(0)  // TODO: usearch 2.0 has no len() method - track count manually
         }
 
         #[cfg(not(feature = "hnsw"))]

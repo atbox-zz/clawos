@@ -64,10 +64,8 @@ tempfile = "3.12"
 criterion = "0.5"
 
 [features]
-default = ["tokio"]
-tokio = ["dep:tokio"]
+default = []
 dev = ["tracing-subscriber/env-filter"]
-
 [lib]
 name = "clawos_wasm"
 path = "src/lib.rs"

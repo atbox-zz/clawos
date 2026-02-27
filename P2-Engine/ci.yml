@@ -1,0 +1,160 @@
+name: ClawOS CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  CLAWFS_KEY: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # 64 hex = 32 bytes
+
+jobs:
+  # ── Gate P2 Check: cargo check + clippy ─────────────────────
+  lint:
+    name: Lint (Gate P2 — zero clippy warnings)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system deps
+        run: sudo apt-get install -y libseccomp-dev libsqlite3-dev
+
+      - name: cargo check
+        run: cargo check --workspace --all-targets
+
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy (zero warnings — P2 Gate requirement)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # ── Unit tests ───────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-24.04
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install system deps
+        run: sudo apt-get install -y libseccomp-dev libsqlite3-dev
+
+      - name: cargo test (all workspace crates)
+        run: cargo test --workspace
+
+      - name: Security-specific tests (P3 Gate requirement)
+        run: cargo test --package clawos-seccomp --package clawfs -- --test-threads=1
+
+  # ── Security audit ───────────────────────────────────────────
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: cargo audit
+        uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Build release binary (x86_64 musl) ──────────────────────
+  build-release:
+    name: Build Release (x86_64-musl)
+    runs-on: ubuntu-24.04
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable + musl target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - name: Install musl cross toolchain
+        run: sudo apt-get install -y musl-tools libseccomp-dev
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-musl-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build static binary
+        run: cargo build --package clawos-agent --target x86_64-unknown-linux-musl --release
+
+      - name: Show binary info
+        run: |
+          ls -lh target/x86_64-unknown-linux-musl/release/clawos-agent
+          file target/x86_64-unknown-linux-musl/release/clawos-agent
+          ldd target/x86_64-unknown-linux-musl/release/clawos-agent || echo "Static — no shared libs (expected)"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clawos-agent-x86_64
+          path: target/x86_64-unknown-linux-musl/release/clawos-agent
+          retention-days: 7
+
+  # ── Preflight check simulation ────────────────────────────────
+  preflight-sim:
+    name: Preflight Script (dry-run)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate spec SHA256s exist
+        run: |
+          for f in specs/p1/*.json; do
+            sha256sum "$f"
+            echo "✅ $f"
+          done
+
+      - name: Validate WIT file exists
+        run: |
+          test -f wit/clawos.wit && echo "✅ WIT spec present" || exit 1
+
+      - name: Validate AppArmor profile
+        run: |
+          test -f apparmor/clawos-agent && echo "✅ AppArmor profile present" || exit 1
+
+      - name: Validate kernel config
+        run: |
+          test -f kernel/clawos-kernel.config && echo "✅ Kernel config present" || exit 1
+          grep "CONFIG_BPF_LSM=y" kernel/clawos-kernel.config
+          grep "CONFIG_SECCOMP_FILTER=y" kernel/clawos-kernel.config
+          grep "CONFIG_USER_NS=y" kernel/clawos-kernel.config
+          grep "CONFIG_MODULE_SIG_FORCE=y" kernel/clawos-kernel.config
+          echo "✅ All required kernel options present"

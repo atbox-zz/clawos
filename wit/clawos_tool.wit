@@ -1,0 +1,102 @@
+// clawos:tool@1.0.0
+// WIT Interface Specification for WASM Tool Components (P3.1/P3.2)
+//
+// This WIT interface defines the contract that all WASM tools/channels
+// must implement to be usable in ClawOS.
+//
+// Version: 1.0.0
+// Status: FROZEN (P3 implementation, design frozen)
+// SHA256: PLACEHOLDER_TO_BE_FILLED_ON_SIGNING
+
+use clawos-kernel.{fs, network, process, clock, log, clawfs}
+
+/// Tool metadata (frozen in tool registry)
+record tool-metadata {
+    tool-name: string,
+    version: string,
+    author: string,
+    description: string,
+    capabilities: list<string>,  // e.g., ["network.http", "fs.read"]
+    input-schema: string,         // JSON Schema for input validation
+    output-schema: string,        // JSON Schema for output validation
+}
+
+/// Tool execution context
+record tool-context {
+    tool-id: string,              // Unique instance ID
+    conversation-id: string,
+    agent-id: string,
+    timestamp: u64,
+    cgroup-cpu-limit: u64,
+    cgroup-memory-limit: u64,
+}
+
+/// Result of tool execution
+record tool-result {
+    success: bool,
+    output: string,               // JSON-serialized output
+    output-bytes: option<list<u8>>,  // Optional binary output
+    error-message: option<string>,
+    metrics: tool-metrics,
+    exit-code: i32,
+}
+
+/// Tool execution metrics
+record tool-metrics {
+    duration-ms: u32,
+    cpu-time-ms: u32,
+    memory-peak-bytes: u64,
+    syscalls-count: u32,
+    network-bytes-sent: u64,
+    network-bytes-recv: u64,
+}
+
+/// Base tool interface that all tools must implement
+interface tool {
+    /// Get tool metadata (called during registration)
+    get-metadata: func() -> tool-metadata
+    
+    /// Execute the tool with given input
+    /// Returns: execution result
+    execute: func(input: string, context: tool-context) -> tool-result
+    
+    /// Validate input against schema
+    /// Returns: true if valid, error message if not
+    validate-input: func(input: string) -> result<bool, string>
+    
+    /// Cleanup/rollback if execution is cancelled
+    cleanup: func(context: tool-context) -> result<_, string>
+}
+
+/// Channel-specific interface (for Telegram/Slack)
+interface channel {
+    /// Initialize channel connection
+    init: func(config: string) -> result<_, string>
+    
+    /// Send message to channel
+    send: func(message: string) -> result<_, string>
+    
+    /// Receive message from channel (blocks until available)
+    receive: func() -> result<string, string>
+    
+    /// Check if new messages available
+    poll: func() -> bool
+}
+
+/// Tool with networking capability
+interface network-tool extends tool {
+    /// Check network connectivity before execution
+    check-connectivity: func() -> bool
+}
+
+/// Tool with file system capability
+interface fs-tool extends tool {
+    /// Verify file permissions before access
+    check-permissions: func(path: string, read-write: bool) -> bool
+}
+
+// Export interfaces
+export tool
+export channel
+export network-tool
+export fs-tool

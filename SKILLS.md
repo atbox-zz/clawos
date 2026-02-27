@@ -359,7 +359,7 @@ Each agent has a strict boundary of responsibility, IO format, and forbidden ope
 | Conflict                                                     | Tasks       | Resolution                                                                          |
 | -------------------------------------------------------------| ------------| ------------------------------------------------------------------------------------|
 | ClawFS vector dimension mismatch with IronClaw memory system | E-02 / E-03 | P1 spec defines unified vector dimension (default 1536 or 3072)                     |
-| Buildroot static binary vs wasmtime JIT needs mprotect       | G-05 / D-04 | seccomp explicitly allows mprotect(PROT_READ\                                       | PROT_EXEC); already in C-01 whitelist |
+| Buildroot static binary vs wasmtime JIT needs mprotect       | G-05 / D-04 | seccomp explicitly allows mprotect(PROT_READ\ PROT_EXEC); already in C-01 whitelist |
 | AppArmor enforce mode blocks eBPF program loading            | F-02 / B-01 | AppArmor profile explicitly adds `capability bpf`; verify during complain mode test |
 | Heartbeat System vs kernel watchdog timer precision          | D-08 / G-02 | Heartbeat uses CLOCK_MONOTONIC; watchdog uses independent kernel timer              |
 
@@ -481,7 +481,7 @@ frozen_spec_deps:
 | W17–18 | P4      | Security Report generated, perf baseline     | `security-report-*.txt`             |
 | W19–20 | P4      | Buildroot image, ISO build                   | `clawos-v0.1.0.iso`                 |
 | W21–22 | Release | QEMU validation, x86_64 + aarch64 test       | QA test report                      |
-| W23–24 | Release | **ClawOS v0.1.0 Alpha Release** 🎯            | GitHub Release, CHANGELOG           |
+| W23–24 | Release | **ClawOS v0.1.0 Alpha Release** 🎯            | GitHub Release, CHANGELOG          |
 
 ---
 

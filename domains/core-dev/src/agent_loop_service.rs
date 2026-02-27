@@ -679,17 +679,18 @@ impl AgentLoopService {
 
     /// Notify systemd that service is ready
     fn notify_systemd_ready() -> Result<()> {
-        Self::sd_notify("READY=1")
+        sd_notify("READY=1")
     }
     /// Notify systemd that service is stopping
     fn notify_systemd_stopping() -> Result<()> {
-        Self::sd_notify("STOPPING=1")
+        sd_notify("STOPPING=1")
     }
+}
 
-    /// Send notification to systemd via sd_notify protocol
-    ///
-    /// Implements the sd_notify() protocol from libsystemd.
-    /// If NOTIFY_SOCKET is not set, this is a no-op (running outside systemd).
+/// Send notification to systemd via sd_notify protocol
+///
+/// Implements the sd_notify() protocol from libsystemd.
+/// If NOTIFY_SOCKET is not set, this is a no-op (running outside systemd).
     fn sd_notify(state: &str) -> Result<()> {
         use std::os::unix::io::AsRawFd;
         use std::os::unix::net::UnixDatagram;

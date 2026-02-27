@@ -7,6 +7,7 @@ use pbkdf2::pbkdf2_hmac;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 const KEY_SIZE: usize = 32;
 const IV_SIZE: usize = 12;
@@ -65,7 +66,7 @@ impl SecretEncryptor {
     pub fn encrypt(&self, secret_id: &str, plaintext: &[u8]) -> Result<SecretMetadata> {
         let version = 1;
         let key = self.derive_secret_key(secret_id, version);
-        let cipher = Aes256Gcm::new(key.into());
+        let cipher = Aes256Gcm::new(&key.into());
 
         let mut nonce_bytes = [0u8; IV_SIZE];
         rand::thread_rng().fill_bytes(&mut nonce_bytes);
@@ -83,15 +84,15 @@ impl SecretEncryptor {
 
         Ok(SecretMetadata {
             secret_id: secret_id.to_string(),
-            encrypted_value: base64::encode(ciphertext_bytes),
-            iv: base64::encode(nonce_bytes),
-            auth_tag: base64::encode(auth_tag_bytes),
+            encrypted_value: STANDARD.encode(ciphertext_bytes),
+            iv: STANDARD.encode(nonce_bytes),
+            auth_tag: STANDARD.encode(auth_tag_bytes),
             algorithm: "AES-256-GCM".to_string(),
             key_id: "kernel-keyring:clawos-master".to_string(),
             kdf: KdfParams {
                 algorithm: "PBKDF2-HMAC-SHA256".to_string(),
                 iterations: PBKDF2_ITERATIONS,
-                salt: base64::encode(format!("{}:v{}", secret_id, version)),
+                salt: STANDARD.encode(format!("{}:v{}", secret_id, version)),
             },
             created_at: now.clone(),
             updated_at: now,
@@ -101,17 +102,17 @@ impl SecretEncryptor {
 
     pub fn decrypt(&self, metadata: &SecretMetadata) -> Result<Vec<u8>> {
         let key = self.derive_secret_key(&metadata.secret_id, metadata.version);
-        let cipher = Aes256Gcm::new(key.into());
+        let cipher = Aes256Gcm::new(&key.into());
 
         let mut nonce_bytes = [0u8; IV_SIZE];
-        base64::decode_config_slice(&metadata.iv, base64::STANDARD, &mut nonce_bytes)
+        STANDARD.decode_slice(&metadata.iv, &mut nonce_bytes)
             .map_err(|e| ClawFSError::Decryption(format!("Invalid IV: {}", e)))?;
         let nonce = Nonce::from_slice(&nonce_bytes);
 
-        let ciphertext = base64::decode(&metadata.encrypted_value)
+        let ciphertext = STANDARD.decode(&metadata.encrypted_value)
             .map_err(|e| ClawFSError::Decryption(format!("Invalid ciphertext: {}", e)))?;
 
-        let auth_tag = base64::decode(&metadata.auth_tag)
+        let auth_tag = STANDARD.decode(&metadata.auth_tag)
             .map_err(|e| ClawFSError::Decryption(format!("Invalid auth tag: {}", e)))?;
 
         let mut encrypted = Vec::with_capacity(ciphertext.len() + auth_tag.len());
@@ -129,7 +130,7 @@ impl SecretEncryptor {
         let plaintext = self.decrypt(old_metadata)?;
         let new_version = old_metadata.version + 1;
         let key = self.derive_secret_key(&old_metadata.secret_id, new_version);
-        let cipher = Aes256Gcm::new(key.into());
+        let cipher = Aes256Gcm::new(&key.into());
 
         let mut nonce_bytes = [0u8; IV_SIZE];
         rand::thread_rng().fill_bytes(&mut nonce_bytes);
@@ -147,15 +148,15 @@ impl SecretEncryptor {
 
         Ok(SecretMetadata {
             secret_id: old_metadata.secret_id.clone(),
-            encrypted_value: base64::encode(ciphertext_bytes),
-            iv: base64::encode(nonce_bytes),
-            auth_tag: base64::encode(auth_tag_bytes),
+            encrypted_value: STANDARD.encode(ciphertext_bytes),
+            iv: STANDARD.encode(nonce_bytes),
+            auth_tag: STANDARD.encode(auth_tag_bytes),
             algorithm: "AES-256-GCM".to_string(),
             key_id: "kernel-keyring:clawos-master".to_string(),
             kdf: KdfParams {
                 algorithm: "PBKDF2-HMAC-SHA256".to_string(),
                 iterations: PBKDF2_ITERATIONS,
-                salt: base64::encode(format!("{}:v{}", old_metadata.secret_id, new_version)),
+                salt: STANDARD.encode(format!("{}:v{}", old_metadata.secret_id, new_version)),
             },
             created_at: old_metadata.created_at.clone(),
             updated_at: now,

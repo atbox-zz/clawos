@@ -55,7 +55,7 @@ impl PathValidator {
             return Err(ClawFSError::NonAscii(component.to_string()));
         }
 
-        if !component.is_lowercase() {
+        if !component.chars().all(char::is_lowercase) {
             return Err(ClawFSError::NotLowercase(component.to_string()));
         }
 

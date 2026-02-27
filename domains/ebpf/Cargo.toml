@@ -7,7 +7,7 @@ license = "Apache-2.0 OR MIT"
 description = "eBPF monitoring agent for ClawOS kernel-level observability"
 
 [dependencies]
-aya = { version = "0.13", default-features = false, features = ["build_bpf"] }
+aya = { version = "0.13", default-features = false }
 aya-log = "0.2"
 log = "0.4"
 tokio = { version = "1", features = ["full"] }
@@ -17,7 +17,13 @@ libc = "0.2"
 bytes = "1"
 
 [build-dependencies]
-aya-build = { version = "0.1", features = ["build_bpf"] }
+aya-build = "0.1"
+anyhow = "1.0"
+cargo_metadata = "0.19"
+
+[lib]
+name = "clawos_ebpf"
+path = "src/bpf/main.bpf.rs"
 
 [[bin]]
 name = "clawos-ebpf"

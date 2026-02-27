@@ -1,9 +1,9 @@
 use crate::error::BridgeError;
-use crate::resource::{FileDescriptor, WasmBinary};
+use crate::resource::FileDescriptor;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-
+use tracing::debug;
 /// Tool registry for ClawOS
 pub struct ToolRegistry {
     /// Path to ClawFS tools directory

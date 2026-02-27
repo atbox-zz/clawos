@@ -31,9 +31,11 @@ pub enum ClawFSError {
     #[error("Key derivation error: {0}")]
     KeyDerivation(String),
 
+    #[error("Database error: {0}")]
+    Database(String),
+
     #[error("SQLite error: {0}")]
     SQLite(#[from] rusqlite::Error),
-
     #[error("Vector index error: {0}")]
     VectorIndex(String),
 

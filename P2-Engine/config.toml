@@ -1,0 +1,69 @@
+# .cargo/config.toml
+# Cross-compilation config for ClawOS
+# Handles both x86_64 + aarch64 targets and eBPF kernel target
+
+[build]
+# Default to native for dev
+target-dir = "target"
+
+# ── eBPF kernel target ──────────────────────────────────────
+# clawos-ebpf crate is compiled for bpf target, not the host
+[target.bpfel-unknown-none]
+rustflags = [
+    "-C", "link-arg=--btf",        # emit BTF for CO-RE (B-07)
+]
+
+[target.bpfeb-unknown-none]
+rustflags = [
+    "-C", "link-arg=--btf",
+]
+
+# ── x86_64 hardened ─────────────────────────────────────────
+[target.x86_64-unknown-linux-musl]
+rustflags = [
+    "-C", "target-feature=+crt-static",   # fully static binary (musl)
+    "-C", "link-arg=-static",
+    "-C", "link-arg=-z,now",              # full RELRO
+    "-C", "link-arg=-z,relro",
+    "-C", "link-arg=-z,noexecstack",
+    "-C", "link-arg=-pie",                # position-independent executable
+]
+linker = "x86_64-linux-musl-gcc"
+
+# ── aarch64 (cross-compilation for ARM servers) ──────────────
+[target.aarch64-unknown-linux-musl]
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "-C", "link-arg=-static",
+    "-C", "link-arg=-z,now",
+    "-C", "link-arg=-z,relro",
+    "-C", "link-arg=-z,noexecstack",
+    "-C", "link-arg=-pie",
+]
+linker = "aarch64-linux-musl-gcc"
+
+# ── Aliases ──────────────────────────────────────────────────
+[alias]
+# Build agent for current native target (dev)
+build-agent = "build -p clawos-agent"
+
+# Build agent for hardened x86_64 musl target (production)
+build-release-x86 = "build -p clawos-agent --target x86_64-unknown-linux-musl --release"
+
+# Build agent for aarch64
+build-release-arm = "build -p clawos-agent --target aarch64-unknown-linux-musl --release"
+
+# Build eBPF programs
+build-ebpf = "build -p clawos-ebpf --target bpfel-unknown-none --release"
+
+# Run all tests
+test-all = "test --workspace"
+
+# Run only security tests
+test-security = "test -p clawos-seccomp -p clawfs"
+
+# Check everything (no build)
+check-all = "check --workspace --all-targets"
+
+# Clippy zero-warning gate (P2 Gate)
+lint = "clippy --workspace --all-targets -- -D warnings"

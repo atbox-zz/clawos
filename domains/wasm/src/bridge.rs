@@ -7,10 +7,11 @@ use wasmtime::{Engine, Linker, Store};
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::os::unix::fs::{PermissionsExt, FileTypeExt, MetadataExt};
+use libc::link;
 use tokio::sync::RwLock;
 use tracing::{info, debug, error, warn};
 use uuid::Uuid;
-
 #[derive(Debug, Clone)]
 pub struct WasmBridgeConfig {
     pub memory_limit: u64,
@@ -224,9 +225,13 @@ impl WasmBridge {
     pub async fn link(&self, old_path: &str, new_path: &str) -> BridgeResult<()> {
         debug!("Creating hard link: {} -> {}", old_path, new_path);
 
-        std::os::unix::fs::link(old_path, new_path)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
-
+        unsafe {
+            let o = std::ffi::CString::new(old_path).map_err(|e| BridgeError::with_code(ErrorCode::EBADF, e.to_string()))?;
+            let n = std::ffi::CString::new(new_path).map_err(|e| BridgeError::with_code(ErrorCode::EBADF, e.to_string()))?;
+            if libc::link(o.as_ptr(), n.as_ptr()) < 0 {
+                return Err(BridgeError::with_code(ErrorCode::from_errno(std::io::Error::last_os_error().raw_os_error().unwrap_or(libc::EIO)), "Failed to create link".to_string()));
+            }
+        }
         debug!("Hard link created: {} -> {}", old_path, new_path);
         Ok(())
     }

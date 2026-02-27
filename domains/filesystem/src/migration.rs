@@ -9,7 +9,7 @@
 use crate::error::{ClawFSError, Result};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Migration configuration
 #[derive(Debug, Clone)]
@@ -53,10 +53,7 @@ impl Migration {
         self.create_tables(&conn)?;
         self.create_fts_indexes(&conn)?;
         self.create_hnsw_tables(&conn)?;
-
-        conn.close()
-            .map_err(|e| ClawFSError::Database(e.to_string()))?;
-
+        // Connection is automatically closed when dropped
         Ok(())
     }
 
@@ -168,7 +165,7 @@ impl Migration {
 
     /// Create HNSW vector index tables
     fn create_hnsw_tables(&self, conn: &Connection) -> Result<()> {
-        let dim = self.config.vector_dimension;
+        let _dim = self.config.vector_dimension;
 
         conn.execute(
             &format!(
@@ -229,7 +226,7 @@ impl Migration {
         )
         .map_err(|e| ClawFSError::Database(e.to_string()))?;
 
-        Ok(conn.last_insert_rowid())
+        Ok(conn.last_insert_rowid() as u64)
     }
 
     /// Get nearest neighbors using HNSW (simplified - would use usearch crate in production)

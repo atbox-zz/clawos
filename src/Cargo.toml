@@ -1,0 +1,61 @@
+[package]
+name = "clawos"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "Apache-2.0 OR MIT"
+description = "ClawOS: AI-Native Operating System - Main Entry Point"
+repository = "https://github.com/clawos/clawos"
+keywords = ["os", "ai", "agent", "linux", "ebpf"]
+categories = ["os::linux-apis", "command-line-utilities"]
+
+[dependencies]
+# Domain crates (workspace members)
+clawos-security = { path = "../domains/security", optional = true }
+clawos-ebpf = { path = "../domains/ebpf", optional = true }
+clawos-wasm = { path = "../domains/wasm", optional = true }
+clawos-filesystem = { path = "../domains/filesystem", package = "clawfs", optional = true }
+clawos-core-dev = { path = "../domains/core-dev", optional = true }
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Command-line parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# Configuration
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time handling
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "3.12"
+
+[features]
+default = []
+security = ["dep:clawos-security"]
+ebpf = ["dep:clawos-ebpf"]
+wasm = ["dep:clawos-wasm"]
+filesystem = ["dep:clawos-filesystem"]
+core-dev = ["dep:clawos-core-dev"]
+full = ["security", "ebpf", "wasm", "filesystem", "core-dev"]
+
+[[bin]]
+name = "clawos"
+path = "main.rs"
+
+[package.metadata.systemd]
+units = [
+    { name = "clawos.service", description = "ClawOS AI-Native Operating System" },
+    { name = "clawos-shutdown.service", description = "ClawOS Shutdown Handler" }
+]

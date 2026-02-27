@@ -1,6 +1,8 @@
 use crate::error::{BridgeError, BridgeResult, ErrorCode};
 use std::fs::File;
 use std::os::unix::io::{AsRawFd, RawFd};
+use std::os::unix::fs::{PermissionsExt, MetadataExt};
+use std::path::Path;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::Mutex;

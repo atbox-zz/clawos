@@ -38,7 +38,7 @@ uuid = { version = "1.8", features = ["v4", "serde"] }
 # Unix domain sockets (built into tokio 1.0+, DEPRECATED: tokio-uds)
 
 # Time handling
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 
 # Security: seccomp-BPF integration (Rust crate version)
 libseccomp = "0.4"

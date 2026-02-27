@@ -26,6 +26,7 @@ use std::ffi::{CStr, CString, NulError};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
+use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
 use crate::error::{ErrorCode, SecurityError, SecurityResult};
@@ -603,7 +604,7 @@ pub fn clone_with_namespaces<F>(
     let stack_ptr = unsafe { stack.as_mut_ptr().add(STACK_SIZE) } as *mut c_void;
 
     // Call clone syscall
-    let pid = unsafe { libc::clone(child_func, stack_ptr, flags, arg, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut()) };
+    let pid = unsafe { libc::clone(child_func, stack_ptr, flags, arg, std::ptr::null_mut() as *mut c_void, std::ptr::null_mut() as *mut c_void, std::ptr::null_mut() as *mut c_void) };
 
     if pid == -1 {
         let err = io::Error::last_os_error();

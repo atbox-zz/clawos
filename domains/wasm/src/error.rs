@@ -1,6 +1,7 @@
 use thiserror::Error;
+use std::fmt;
 
-#[derive(Error, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorCode {
     Success = 0,
     EAgain = 1,
@@ -23,6 +24,7 @@ pub enum ErrorCode {
     ENOSPC = 28,
     EROFS = 30,
     ENOTEMPTY = 39,
+    EBADF = 9,
     ECONNREFUSED = 111,
     ETIMEDOUT = 110,
     ENETUNREACH = 101,
@@ -31,7 +33,7 @@ pub enum ErrorCode {
     EADDRINUSE = 98,
     EADDRNOTAVAIL = 99,
     WasmAllocFailed = 100,
-    WasmStackOverflow = 101,
+    WasmStackOverflow = 113,
     WasmTrap = 102,
     WasmInvalidModule = 103,
     WasmFunctionNotFound = 104,
@@ -45,6 +47,12 @@ pub enum ErrorCode {
     Timeout = 207,
     Canceled = 208,
     TooManyPending = 209,
+}
+
+impl fmt::Display for ErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name())
+    }
 }
 
 impl ErrorCode {

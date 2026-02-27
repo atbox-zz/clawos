@@ -70,7 +70,7 @@ impl IdentityFile {
             agent_id: agent_id.to_string(),
             version: 1,
             created_at: now.clone(),
-            updated_at: now,
+            updated_at: now.clone(),
             state: IdentityState {
                 current_phase: "P1".to_string(),
                 current_task: "initialization".to_string(),
@@ -186,7 +186,7 @@ impl IdentityFile {
 
     pub fn load(path: &Path) -> Result<Self> {
         let json = std::fs::read_to_string(path)?;
-        let mut identity: IdentityFile = serde_json::from_str(&json)?;
+        let identity: IdentityFile = serde_json::from_str(&json)?;
 
         if !identity.verify_checksum() {
             return Err(ClawFSError::IdentityFile(
