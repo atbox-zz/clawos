@@ -7,11 +7,11 @@ members = [
     "src",
     
     # Domain crates
-    "domains/security",  # P2.2, P2.4, P2.8
-    "domains/ebpf",      # P2.3
+    "domains/ebpf",    # P2.3 (using aya-build 0.1.2 without edition2024)
     "domains/wasm",      # P2.6
     "domains/filesystem", # P2.7
     "domains/core-dev",  # P2.5
+    "domains/security",  # P2.2, P2.4, P2.8
 ]
 
 resolver = "2"
@@ -19,7 +19,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.87"
 license = "Apache-2.0 OR MIT"
 authors = ["ClawOS Project"]
 

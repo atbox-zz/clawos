@@ -37,9 +37,6 @@ protocol = "sparse"
 git-fetch-with-cli = true
 
 [env]
-# Set RUSTFLAGS for all builds
-RUSTFLAGS = "-D warnings"
 
-[http]
 # Set proxy if needed
 # proxy = "http://proxy.example.com:8080"

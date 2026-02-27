@@ -18,8 +18,8 @@ jobs:
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
-        toolchain: "1.85"
-        toolchain: "1.80"
+      with:
+        toolchain: "1.87"
         components: rustfmt, clippy
 
     - name: Install system dependencies
