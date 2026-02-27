@@ -49,10 +49,10 @@ impl ToolRegistry {
         let binary_path = tool_dir.join("tool.wasm");
 
         if tool_name.contains('/') || tool_name.contains("..") {
-            return Err(BridgeError::InvalidInput(format!(
-                "Invalid tool name: {}",
-                tool_name
-            )));
+            return Err(BridgeError::with_code(
+                ErrorCode::EINVAL,
+                format!("Invalid tool name: {}", tool_name)
+            ));
         }
 
         debug!("Storing WASM binary for tool {}", tool_name);

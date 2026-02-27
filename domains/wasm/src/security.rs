@@ -30,7 +30,7 @@ impl SeccompFilter {
     pub fn new(strict: bool) -> BridgeResult<Self> {
         info!("Initializing seccomp filter (strict={})", strict);
 
-        let mut ctx = ScmpFilterContext::new_filter(ScmpAction::Errno(libc::EPERM))
+        let mut ctx = ScmpFilterContext::new(ScmpAction::Errno(libc::EPERM))
             .map_err(|e| BridgeError::Security(format!("Failed to create seccomp filter: {}", e)))?;
 
         for syscall_name in ALLOWED_SYSCALLS {

@@ -22,10 +22,11 @@
 // to safely map to UID 65534 without breaking database connectivity.
 
 use libc::{c_char, c_int, c_void, pid_t, size_t};
-use std::ffi::{CStr, CString, NulError};
-use std::fs::{self, File, OpenOptions};
+use nix::unistd::pivot_root;
+use std::ffi::{CStr, CString};
+use std::fs::OpenOptions;
 use std::io::{self, Read, Write};
-use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
+use std::os::unix::io::RawFd;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
@@ -431,15 +432,8 @@ impl NamespaceIsolator {
             SecurityError::Internal(format!("Failed to create CString: {}", e))
         })?;
 
-        let ret = unsafe { libc::pivot_root(new_root_c.as_ptr(), put_old_c.as_ptr()) };
-
-        if ret == -1 {
-            let err = io::Error::last_os_error();
-            return Err(SecurityError::Internal(format!(
-                "Failed to pivot_root: {}",
-                err
-            )));
-        }
+        pivot_root(new_root_c.as_ptr(), put_old_c.as_ptr())
+            .map_err(|e| SecurityError::Internal(format!("Failed to pivot_root: {}", e)))?;
 
         // Change current directory to /
         std::env::set_current_dir("/").map_err(|e| {

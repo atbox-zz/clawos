@@ -65,10 +65,10 @@ impl ErrorCode {
     pub fn to_seccomp_errno(self) -> Option<u32> {
         match self {
             ErrorCode::Success => None,
-            ErrorCode::EAgain => Some(libseccomp::scmp_errno::EAGAIN),
-            ErrorCode::EIO => Some(libseccomp::scmp_errno::EIO),
-            ErrorCode::ENOENT => Some(libseccomp::scmp_errno::ENOENT),
-            ErrorCode::EPerm => Some(libseccomp::scmp_errno::EPERM),
+            ErrorCode::EAgain => Some(libc::EAGAIN as u32),
+            ErrorCode::EIO => Some(libc::EIO as u32),
+            ErrorCode::ENOENT => Some(libc::ENOENT as u32),
+            ErrorCode::EPerm => Some(libc::EPERM as u32),
             ErrorCode::EProto => None,
             ErrorCode::ETimeout => None,
             ErrorCode::EInternal => None,
@@ -187,10 +187,10 @@ mod tests {
 
     #[test]
     fn test_seccomp_errno_mapping() {
-        assert_eq!(Some(libseccomp::scmp_errno::EAGAIN), ErrorCode::EAgain.to_seccomp_errno());
-        assert_eq!(Some(libseccomp::scmp_errno::EIO), ErrorCode::EIO.to_seccomp_errno());
-        assert_eq!(Some(libseccomp::scmp_errno::ENOENT), ErrorCode::ENOENT.to_seccomp_errno());
-        assert_eq!(Some(libseccomp::scmp_errno::EPERM), ErrorCode::EPerm.to_seccomp_errno());
+        assert_eq!(Some(libc::EAGAIN as u32), ErrorCode::EAgain.to_seccomp_errno());
+        assert_eq!(Some(libc::EIO as u32), ErrorCode::EIO.to_seccomp_errno());
+        assert_eq!(Some(libc::ENOENT as u32), ErrorCode::ENOENT.to_seccomp_errno());
+        assert_eq!(Some(libc::EPERM as u32), ErrorCode::EPerm.to_seccomp_errno());
         assert_eq!(None, ErrorCode::Success.to_seccomp_errno());
         assert_eq!(None, ErrorCode::EProto.to_seccomp_errno());
     }

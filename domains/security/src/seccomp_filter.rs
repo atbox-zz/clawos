@@ -41,13 +41,13 @@ pub enum CompareOperator {
 impl CompareOperator {
     fn to_seccomp_op(self) -> ScmpCompareOp {
         match self {
-            CompareOperator::Eq => ScmpCompareOp::ScmpCmpEq,
-            CompareOperator::Ne => ScmpCompareOp::ScmpCmpNe,
-            CompareOperator::Gt => ScmpCompareOp::ScmpCmpGt,
-            CompareOperator::Lt => ScmpCompareOp::ScmpCmpLt,
-            CompareOperator::Ge => ScmpCompareOp::ScmpCmpGe,
-            CompareOperator::Le => ScmpCompareOp::ScmpCmpLe,
-            CompareOperator::MaskedEq => ScmpCompareOp::ScmpCmpMaskedEq,
+            CompareOperator::Eq => ScmpCompareOp::Equal,
+            CompareOperator::Ne => ScmpCompareOp::NotEqual,
+            CompareOperator::Gt => ScmpCompareOp::Greater,
+            CompareOperator::Lt => ScmpCompareOp::Less,
+            CompareOperator::Ge => ScmpCompareOp::GreaterEqual,
+            CompareOperator::Le => ScmpCompareOp::LessOrEqual,
+            CompareOperator::MaskedEq => ScmpCompareOp::MaskedEqual(0), // mask will be applied separately
         }
     }
 }
@@ -201,7 +201,7 @@ pub struct SeccompFilter {
 
 impl SeccompFilter {
     pub fn new(whitelist: Whitelist) -> SecurityResult<Self> {
-        let ctx = ScmpFilterContext::new_filter(ScmpAction::ScmpActKillProcess)
+        let ctx = ScmpFilterContext::new(ScmpAction::KillProcess)
             .map_err(|e| SecurityError::SeccompFilter(format!("Failed to create filter: {}", e)))?;
 
         let mut filter = SeccompFilter { ctx, whitelist };
@@ -233,7 +233,7 @@ impl SeccompFilter {
     fn add_allow_rule(&mut self, rule: &SyscallRule) -> SecurityResult<()> {
         let syscall = self.resolve_syscall(&rule.name)?;
         self.ctx
-            .add_rule(ScmpAction::ScmpActAllow, syscall)
+            .add_rule(ScmpAction::Allow, syscall)
             .map_err(|e| {
                 SecurityError::SeccompFilter(format!("Failed to add allow rule for {}: {}", rule.name, e))
             })?;
@@ -242,9 +242,9 @@ impl SeccompFilter {
 
     fn add_deny_rule(&mut self, rule: &SyscallRule) -> SecurityResult<()> {
         let syscall = self.resolve_syscall(&rule.name)?;
-        let errno = ErrorCode::EPerm.to_seccomp_errno().unwrap_or(libseccomp::scmp_errno::EPERM);
+        let errno = ErrorCode::EPerm.to_seccomp_errno().unwrap_or(libc::EPERM as u32) as i32;
         self.ctx
-            .add_rule(ScmpAction::ScmpActErrno(errno), syscall)
+            .add_rule(ScmpAction::Errno(errno), syscall)
             .map_err(|e| {
                 SecurityError::SeccompFilter(format!("Failed to add deny rule for {}: {}", rule.name, e))
             })?;
@@ -269,12 +269,12 @@ impl SeccompFilter {
     }
 
     fn add_port_restriction(&mut self, syscall: ScmpSyscall, restriction: &PortRestriction) -> SecurityResult<()> {
-        let errno = ErrorCode::EPerm.to_seccomp_errno().unwrap_or(libseccomp::scmp_errno::EPERM);
+        let errno = ErrorCode::EPerm.to_seccomp_errno().unwrap_or(libc::EPERM as u32) as i32;
 
         for port in &restriction.allowed_ports {
-            let arg_cmp = ScmpArgCompare::new(1, ScmpCompareOp::ScmpCmpEq, *port as u64);
+            let arg_cmp = ScmpArgCompare::new(1, ScmpCompareOp::Equal, *port as u64);
             self.ctx
-                .add_rule_conditional(ScmpAction::ScmpActAllow, syscall, &[arg_cmp])
+                .add_rule_conditional(ScmpAction::Allow, syscall, &[arg_cmp])
                 .map_err(|e| {
                     SecurityError::SeccompFilter(format!(
                         "Failed to add port restriction for port {}: {}",
@@ -284,7 +284,7 @@ impl SeccompFilter {
         }
 
         self.ctx
-            .add_rule(ScmpAction::ScmpActErrno(errno), syscall)
+            .add_rule(ScmpAction::Errno(errno), syscall)
             .map_err(|e| {
                 SecurityError::SeccompFilter(format!(
                     "Failed to add default deny for port-restricted syscall: {}",
@@ -296,17 +296,18 @@ impl SeccompFilter {
     }
 
     fn add_argument_filter(&mut self, syscall: ScmpSyscall, filter: &ArgumentFilter) -> SecurityResult<()> {
-        let errno = ErrorCode::EPerm.to_seccomp_errno().unwrap_or(libseccomp::scmp_errno::EPERM);
-        let op = filter.operator.to_seccomp_op();
+        let errno = ErrorCode::EPerm.to_seccomp_errno().unwrap_or(libc::EPERM as u32) as i32;
 
-        let arg_cmp = if let Some(mask) = filter.mask {
-            ScmpArgCompare::new_masked(filter.arg_index, op, filter.value, mask)
+        // For masked operations, use MaskedEqual variant
+        let op = if filter.mask.is_some() {
+            ScmpCompareOp::MaskedEqual(filter.mask.unwrap())
         } else {
-            ScmpArgCompare::new(filter.arg_index, op, filter.value)
+            filter.operator.to_seccomp_op()
         };
+        let arg_cmp = ScmpArgCompare::new(filter.arg_index, op, filter.value);
 
         self.ctx
-            .add_rule_conditional(ScmpAction::ScmpActAllow, syscall, &[arg_cmp])
+            .add_rule_conditional(ScmpAction::Allow, syscall, &[arg_cmp])
             .map_err(|e| {
                 SecurityError::SeccompFilter(format!(
                     "Failed to add argument filter for arg {}: {}",
@@ -315,7 +316,7 @@ impl SeccompFilter {
             })?;
 
         self.ctx
-            .add_rule(ScmpAction::ScmpActErrno(errno), syscall)
+            .add_rule(ScmpAction::Errno(errno), syscall)
             .map_err(|e| {
                 SecurityError::SeccompFilter(format!(
                     "Failed to add default deny for argument-filtered syscall: {}",
@@ -338,10 +339,12 @@ impl SeccompFilter {
         Ok(())
     }
 
+    /// Export the BPF filter (Note: libseccomp 0.4 removed get_filter method)
+    /// This method is no longer supported - use load() instead to apply the filter
     pub fn export_bpf(&self) -> SecurityResult<Vec<u8>> {
-        self.ctx
-            .get_filter()
-            .map_err(|e| SecurityError::SeccompFilter(format!("Failed to export BPF: {}", e)))
+        Err(SecurityError::SeccompFilter(
+            "export_bpf() is not supported in libseccomp 0.4. Use apply() to load the filter instead.".to_string()
+        ))
     }
 
     pub fn get_whitelist(&self) -> &Whitelist {
