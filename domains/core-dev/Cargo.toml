@@ -77,11 +77,6 @@ default = ["metrics", "clawfs"]
 metrics = ["dep:prometheus"]
 clawfs = ["dep:rusqlite"]
 tokio-console = ["tokio/tracing"]
-default = ["metrics", "clawfs"]
-metrics = ["dep:prometheus"]
-clawfs = ["dep:rusqlite", "dep:usearch"]
-tokio-console = ["tokio/tracing"]
-
 [lib]
 name = "clawos_core_dev"
 path = "src/lib.rs"
