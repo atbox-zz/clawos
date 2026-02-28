@@ -508,15 +508,12 @@ impl Device {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Device closed"));
         }
 
-        match flags {
-            0 => {},
-            1 => {},
-            2 => {},
-            _ => return Err(BridgeError::with_code(ErrorCode::EINVAL, "Invalid open flags")),
-        };
-        let file = std::fs::File::open(self.path)
-                .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+        if !matches!(flags, 0 | 1 | 2) {
+            return Err(BridgeError::with_code(ErrorCode::EINVAL, "Invalid open flags"));
+        }
 
+        let file = std::fs::File::open(&self.path)
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?
         let mut fd = self.file.lock().await;
         *fd = Some(file);
         debug!("Device opened: {}", self.path);
