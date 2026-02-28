@@ -23,6 +23,13 @@ pub struct FileStat {
     pub blocks: u64,
 }
 
+/// Helper function to convert std::io::Error to BridgeError
+#[inline]
+fn io_error_to_bridge(e: std::io::Error, context: String) -> BridgeError {
+    BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), context)
+}
+
+
 #[derive(Debug)]
 pub struct FileDescriptor {
     file: Arc<Mutex<File>>,
@@ -48,7 +55,7 @@ impl FileDescriptor {
         use std::io::Read;
         let to_read = std::cmp::min(buffer.len() as u32, max_bytes) as usize;
         let bytes_read = file.read(&mut buffer[..to_read])
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
         Ok(bytes_read as u32)
     }
 
@@ -60,7 +67,7 @@ impl FileDescriptor {
         let mut file = self.file.lock().await;
         use std::io::Write;
         let bytes_written = file.write(data)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
         Ok(bytes_written as u32)
     }
 
@@ -81,7 +88,7 @@ impl FileDescriptor {
         };
 
         let pos = file.seek(seek_from)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
         Ok(pos)
     }
 
@@ -92,7 +99,7 @@ impl FileDescriptor {
 
         let file = self.file.lock().await;
         let metadata = file.metadata()
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         Ok(FileStat {
             size: metadata.len(),
@@ -129,7 +136,7 @@ impl FileDescriptor {
 
         let file = self.file.lock().await;
         file.sync_all()
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
         Ok(())
     }
 
@@ -161,9 +168,9 @@ pub struct DirectoryEntry {
 impl DirectoryEntry {
     pub fn new(path: String) -> BridgeResult<Self> {
         let entries = std::fs::read_dir(path)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         Ok(DirectoryEntry {
             path,
@@ -307,7 +314,7 @@ impl Socket {
             })?;
 
         stream.set_nonblocking(true)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         let mut fd = self.fd.lock().await;
         *fd = Some(stream);
@@ -326,7 +333,7 @@ impl Socket {
 
         use std::io::Write;
         let bytes_written = stream.write(data)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
         Ok(bytes_written as u32)
     }
 
@@ -347,7 +354,7 @@ impl Socket {
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 Err(BridgeError::with_code(ErrorCode::EAgain, "Operation would block"))
             }
-            Err(e) => Err(BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string())),
+            Err(e) => Err(io_error_to_bridge(e, e.to_string())),
         }
     }
 
@@ -387,7 +394,7 @@ impl Cgroup {
         let limit_str = if limit_bytes == 0 { "max".to_string() } else { limit_bytes.to_string() };
 
         std::fs::write(memory_max_path, limit_str)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         debug!("Cgroup memory limit set to {} bytes", limit_bytes);
         Ok(())
@@ -402,7 +409,7 @@ impl Cgroup {
         let cpu_max_str = format!("{} {}", cpu_max, period_us);
 
         std::fs::write(cpu_max_path, cpu_max_str)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         debug!("Cgroup CPU limit set to {} / {} us", cpu_max, period_us);
         Ok(())
@@ -417,7 +424,7 @@ impl Cgroup {
         let pids_max_str = if max_pids == 0 { "max".to_string() } else { max_pids.to_string() };
 
         std::fs::write(pids_max_path, pids_max_str)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         debug!("Cgroup PID limit set to {}", max_pids);
         Ok(())
@@ -430,7 +437,7 @@ impl Cgroup {
 
         let memory_current_path = format!("{}/memory.current", self.path);
         let usage = std::fs::read_to_string(memory_current_path)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         usage.trim().parse::<u64>()
             .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse memory usage"))
@@ -443,7 +450,7 @@ impl Cgroup {
 
         let cpu_stat_path = format!("{}/cpu.stat", self.path);
         let stat = std::fs::read_to_string(cpu_stat_path)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         stat.lines()
             .find(|line| line.starts_with("usage_usec "))
@@ -463,7 +470,7 @@ impl Cgroup {
 
         let pids_current_path = format!("{}/pids.current", self.path);
         let count = std::fs::read_to_string(pids_current_path)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         count.trim().parse::<u64>()
             .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse PID count"))
@@ -513,7 +520,7 @@ impl Device {
         }
 
         let file = std::fs::File::open(&self.path)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
         let mut fd = self.file.lock().await;
         *fd = Some(file);
         debug!("Device opened: {}", self.path);
@@ -531,11 +538,11 @@ impl Device {
 
         use std::io::{Read, Seek, SeekFrom};
         file.seek(SeekFrom::Start(offset))
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         let to_read = std::cmp::min(buffer.len() as u32, length) as usize;
         file.read_exact(&mut buffer[..to_read])
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         Ok(())
     }
@@ -551,10 +558,10 @@ impl Device {
 
         use std::io::{Seek, SeekFrom, Write};
         file.seek(SeekFrom::Start(offset))
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         file.write_all(data)
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         Ok(())
     }
@@ -569,7 +576,7 @@ impl Device {
             .ok_or_else(|| BridgeError::with_code(ErrorCode::EBADF, "Device not opened"))?;
 
         file.sync_all()
-            .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
+            .map_err(|e| io_error_to_bridge(e, e.to_string()))?;
 
         Ok(())
     }
