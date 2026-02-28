@@ -493,10 +493,10 @@ impl Cgroup {
                     .ok_or_else(|| BridgeError::with_code(ErrorCode::EIO, "Failed to parse CPU usage"))?;
                 return Ok(usage_usec.parse::<u64>()
                     .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse CPU usage"))? * 1000);
+            }
         }
 
         Err(BridgeError::with_code(ErrorCode::EIO, "CPU usage not found in cgroup stat"))
-    }
 
     pub async fn get_pid_count(&self) -> BridgeResult<u64> {
         let closed = self.closed.lock().await;
