@@ -86,7 +86,6 @@ impl ErrorCode {
             _ => ErrorCode::EInternal,
         }
     }
-    }
 
     pub fn as_errno(&self) -> i32 {
         match self {
