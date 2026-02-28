@@ -23,7 +23,7 @@
 
 use libc::{c_char, c_int, c_void, pid_t, size_t};
 use nix::unistd::pivot_root;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{self, Write};
