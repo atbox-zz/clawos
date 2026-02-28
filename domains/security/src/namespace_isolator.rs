@@ -594,17 +594,27 @@ pub unsafe fn clone_with_namespaces<F>(
 ) -> SecurityResult<pid_t> {
     // Allocate stack for child process
     const STACK_SIZE: usize = 1024 * 1024; // 1MB stack
-    let mut stack: Vec<u8> = vec![0u8; STACK_SIZE];
-    // Allocate stack for child process
-    const STACK_SIZE: usize = 1024 * 1024; // 1MB stack
-    let mut stack: Vec<u8> = vec![0u8; STACK_SIZE];
+    let stack: Vec<u8> = vec![0u8; STACK_SIZE];
 
     // Stack grows downward, so point to the end
     let stack_ptr = unsafe { stack.as_mut_ptr().add(STACK_SIZE) } as *mut c_void;
 
     // Call clone syscall
     #[allow(clippy::unnecessary_cast)]
-    let pid = unsafe { libc::clone(child_func, stack_ptr, flags, arg, std::ptr::null_mut() as *mut c_void, std::ptr::null_mut() as *mut c_void, std::ptr::null_mut() as *mut c_void) };
+    let pid = unsafe {
+        libc::clone(
+            child_func,
+            stack_ptr,
+            flags,
+            arg,
+            std::ptr::null_mut() as *mut c_void,
+            std::ptr::null_mut() as *mut c_void,
+            std::ptr::null_mut() as *mut c_void,
+        )
+    };
+
+    // Keep stack alive until after clone syscall completes
+    std::mem::forget(stack);
 
     if pid == -1 {
         let err = io::Error::last_os_error();
