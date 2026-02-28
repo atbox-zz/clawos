@@ -301,8 +301,8 @@ impl SeccompFilter {
         let errno = ErrorCode::EPerm.to_seccomp_errno().unwrap_or(libc::EPERM as u32) as i32;
 
         // For masked operations, use MaskedEqual variant
-        let op = if filter.mask.is_some() {
-            ScmpCompareOp::MaskedEqual(filter.mask.unwrap())
+        let op = if let Some(mask_val) = filter.mask {
+            ScmpCompareOp::MaskedEqual(mask_val)
         } else {
             filter.operator.to_seccomp_op()
         };

@@ -82,7 +82,7 @@ impl SeccompPruner {
     
     pub fn generate_pruning_recommendations(
         analysis: &StraceAnalysis,
-        current_whitelist: &HashSet<String>,
+        _current_whitelist: &HashSet<String>,
     ) -> Vec<PruningRecommendation> {
         let mut recommendations = vec![];
         

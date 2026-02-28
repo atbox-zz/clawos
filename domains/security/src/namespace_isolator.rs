@@ -26,7 +26,7 @@ use nix::unistd::pivot_root;
 use std::ffi::{CStr, CString};
 use std::fs;
 use std::fs::OpenOptions;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::os::unix::io::RawFd;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
@@ -579,7 +579,7 @@ impl Drop for NamespaceIsolator {
 /// # Returns
 /// * `Ok(pid)` - PID of the child process (in parent)
 /// * `Err(SecurityError)` - Error if clone fails
-pub fn clone_with_namespaces<F>(
+pub unsafe fn clone_with_namespaces<F>(
     flags: c_int,
     child_func: extern "C" fn(*mut c_void) -> c_int,
     arg: *mut c_void,
@@ -592,7 +592,7 @@ pub fn clone_with_namespaces<F>(
     let stack_ptr = unsafe { stack.as_mut_ptr().add(STACK_SIZE) } as *mut c_void;
 
     // Call clone syscall
-    let pid = unsafe { libc::clone(child_func, stack_ptr, flags, arg, std::ptr::null_mut() as *mut c_void, std::ptr::null_mut() as *mut c_void, std::ptr::null_mut() as *mut c_void) };
+    let pid = unsafe { libc::clone(child_func, stack_ptr, flags, arg, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut()) };
 
     if pid == -1 {
         let err = io::Error::last_os_error();
