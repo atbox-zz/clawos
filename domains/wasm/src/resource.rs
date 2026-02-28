@@ -2,10 +2,10 @@ use crate::error::{BridgeError, BridgeResult, ErrorCode};
 use std::fs::File;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
-use std::path;
+
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{debug, warn};
+use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct FileStat {
@@ -40,11 +40,9 @@ impl FileDescriptor {
     }
 
     pub async fn read(&self, buffer: &mut [u8], max_bytes: u32) -> BridgeResult<u32> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "File descriptor closed"));
         }
-        drop(closed);
 
         let mut file = self.file.lock().await;
         use std::io::Read;
@@ -55,11 +53,9 @@ impl FileDescriptor {
     }
 
     pub async fn write(&self, data: &[u8]) -> BridgeResult<u32> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "File descriptor closed"));
         }
-        drop(closed);
 
         let mut file = self.file.lock().await;
         use std::io::Write;
@@ -69,11 +65,9 @@ impl FileDescriptor {
     }
 
     pub async fn seek(&self, offset: i64, whence: u8) -> BridgeResult<u64> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "File descriptor closed"));
         }
-        drop(closed);
 
         let mut file = self.file.lock().await;
         use std::io::Seek;
@@ -92,11 +86,9 @@ impl FileDescriptor {
     }
 
     pub async fn stat(&self) -> BridgeResult<FileStat> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "File descriptor closed"));
         }
-        drop(closed);
 
         let file = self.file.lock().await;
         let metadata = file.metadata()
@@ -131,11 +123,9 @@ impl FileDescriptor {
     }
 
     pub async fn sync(&self) -> BridgeResult<()> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "File descriptor closed"));
         }
-        drop(closed);
 
         let file = self.file.lock().await;
         file.sync_all()
@@ -170,7 +160,7 @@ pub struct DirectoryEntry {
 
 impl DirectoryEntry {
     pub fn new(path: String) -> BridgeResult<Self> {
-        let entries = std::fs::read_dir(&path)
+        let entries = std::fs::read_dir(path)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
@@ -184,11 +174,9 @@ impl DirectoryEntry {
     }
 
     pub async fn read(&self) -> BridgeResult<String> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Directory entry closed"));
         }
-        drop(closed);
 
         let mut entries = self.entries.lock().await;
         let mut index = self.index.lock().await;
@@ -211,7 +199,6 @@ impl DirectoryEntry {
         *closed = true;
         debug!("Directory entry closed: {}", self.path);
         Ok(())
-    }
 }
 
 #[derive(Debug)]
@@ -244,11 +231,9 @@ impl MemoryRegion {
     }
 
     pub async fn read(&self, offset: u32, buffer: &mut [u8], length: u32) -> BridgeResult<()> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Memory region closed"));
         }
-        drop(closed);
 
         let data = self.data.lock().await;
         let offset = offset as usize;
@@ -263,11 +248,9 @@ impl MemoryRegion {
     }
 
     pub async fn write(&self, offset: u32, data: &[u8]) -> BridgeResult<()> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Memory region closed"));
         }
-        drop(closed);
 
         let mut mem_data = self.data.lock().await;
         let offset = offset as usize;
@@ -282,8 +265,7 @@ impl MemoryRegion {
     }
 
     pub async fn sync(&self) -> BridgeResult<()> {
-        let closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Memory region closed"));
         }
         Ok(())
@@ -306,17 +288,14 @@ pub struct Socket {
     closed: Arc<Mutex<bool>>,
 }
 
-impl Socket {}
-
+impl Socket {
     pub async fn connect(&self, host: &str, port: u16) -> BridgeResult<()> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Socket closed"));
         }
-        drop(closed);
 
         let address = format!("{}:{}", host, port);
-        let stream = std::net::TcpStream::connect(&address)
+        let stream = std::net::TcpStream::connect(address)
             .map_err(|e| {
                 let code = match e.kind() {
                     std::io::ErrorKind::ConnectionRefused => ErrorCode::ECONNREFUSED,
@@ -337,11 +316,9 @@ impl Socket {}
     }
 
     pub async fn send(&self, data: &[u8]) -> BridgeResult<u32> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Socket closed"));
         }
-        drop(closed);
 
         let mut fd = self.fd.lock().await;
         let stream = fd.as_mut()
@@ -354,11 +331,9 @@ impl Socket {}
     }
 
     pub async fn recv(&self, buffer: &mut [u8], max_bytes: u32) -> BridgeResult<u32> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Socket closed"));
         }
-        drop(closed);
 
         let mut fd = self.fd.lock().await;
         let stream = fd.as_mut()
@@ -387,7 +362,6 @@ impl Socket {}
         *fd = None;
         debug!("Socket closed");
         Ok(())
-    }
 }
 
 #[derive(Debug)]
@@ -405,16 +379,14 @@ impl Cgroup {
     }
 
     pub async fn set_memory_limit(&self, limit_bytes: u64) -> BridgeResult<()> {
-        let closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Cgroup closed"));
         }
-        drop(closed);
 
         let memory_max_path = format!("{}/memory.max", self.path);
         let limit_str = if limit_bytes == 0 { "max".to_string() } else { limit_bytes.to_string() };
 
-        std::fs::write(&memory_max_path, limit_str)
+        std::fs::write(memory_max_path, limit_str)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
         debug!("Cgroup memory limit set to {} bytes", limit_bytes);
@@ -422,16 +394,14 @@ impl Cgroup {
     }
 
     pub async fn set_cpu_limit(&self, cpu_max: u64, period_us: u64) -> BridgeResult<()> {
-        let closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Cgroup closed"));
         }
-        drop(closed);
 
         let cpu_max_path = format!("{}/cpu.max", self.path);
         let cpu_max_str = format!("{} {}", cpu_max, period_us);
 
-        std::fs::write(&cpu_max_path, cpu_max_str)
+        std::fs::write(cpu_max_path, cpu_max_str)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
         debug!("Cgroup CPU limit set to {} / {} us", cpu_max, period_us);
@@ -439,16 +409,14 @@ impl Cgroup {
     }
 
     pub async fn set_pid_limit(&self, max_pids: u64) -> BridgeResult<()> {
-        let closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Cgroup closed"));
         }
-        drop(closed);
 
         let pids_max_path = format!("{}/pids.max", self.path);
         let pids_max_str = if max_pids == 0 { "max".to_string() } else { max_pids.to_string() };
 
-        std::fs::write(&pids_max_path, pids_max_str)
+        std::fs::write(pids_max_path, pids_max_str)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
         debug!("Cgroup PID limit set to {}", max_pids);
@@ -456,14 +424,12 @@ impl Cgroup {
     }
 
     pub async fn get_memory_usage(&self) -> BridgeResult<u64> {
-        let closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Cgroup closed"));
         }
-        drop(closed);
 
         let memory_current_path = format!("{}/memory.current", self.path);
-        let usage = std::fs::read_to_string(&memory_current_path)
+        let usage = std::fs::read_to_string(memory_current_path)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
         usage.trim().parse::<u64>()
@@ -471,14 +437,12 @@ impl Cgroup {
     }
 
     pub async fn get_cpu_usage(&self) -> BridgeResult<u64> {
-        let closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Cgroup closed"));
         }
-        drop(closed);
 
         let cpu_stat_path = format!("{}/cpu.stat", self.path);
-        let stat = std::fs::read_to_string(&cpu_stat_path)
+        let stat = std::fs::read_to_string(cpu_stat_path)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
         stat.lines()
@@ -493,14 +457,12 @@ impl Cgroup {
     }
 
     pub async fn get_pid_count(&self) -> BridgeResult<u64> {
-        let closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Cgroup closed"));
         }
-        drop(closed);
 
         let pids_current_path = format!("{}/pids.current", self.path);
-        let count = std::fs::read_to_string(&pids_current_path)
+        let count = std::fs::read_to_string(pids_current_path)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
         count.trim().parse::<u64>()
@@ -542,20 +504,17 @@ impl Device {
     }
 
     pub async fn open(&self, flags: u32) -> BridgeResult<()> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Device closed"));
         }
-        drop(closed);
 
-        let _open_flags = match flags {
-            0 => libc::O_RDONLY,
-            1 => libc::O_WRONLY,
-            2 => libc::O_RDWR,
+        match flags {
+            0 => {},
+            1 => {},
+            2 => {},
             _ => return Err(BridgeError::with_code(ErrorCode::EINVAL, "Invalid open flags")),
         };
-
-        let file = std::fs::File::open(&self.path)
+        let file = std::fs::File::open(self.path)
                 .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
         let mut fd = self.file.lock().await;
@@ -565,11 +524,9 @@ impl Device {
     }
 
     pub async fn read(&self, buffer: &mut [u8], offset: u64, length: u32) -> BridgeResult<()> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Device closed"));
         }
-        drop(closed);
 
         let mut file = self.file.lock().await;
         let file = file.as_mut()
@@ -587,11 +544,9 @@ impl Device {
     }
 
     pub async fn write(&self, data: &[u8], offset: u64) -> BridgeResult<()> {
-        let mut closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Device closed"));
         }
-        drop(closed);
 
         let mut file = self.file.lock().await;
         let file = file.as_mut()
@@ -608,11 +563,9 @@ impl Device {
     }
 
     pub async fn sync(&self) -> BridgeResult<()> {
-        let closed = self.closed.lock().await;
-        if *closed {
+        if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Device closed"));
         }
-        drop(closed);
 
         let mut file = self.file.lock().await;
         let file = file.as_mut()
