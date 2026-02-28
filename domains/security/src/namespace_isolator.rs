@@ -31,7 +31,7 @@ use std::os::unix::io::RawFd;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
-use crate::error::{ErrorCode, SecurityError, SecurityResult};
+use crate::error::{SecurityError, SecurityResult};
 
 /// Namespace types supported by Linux kernel
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -594,7 +594,7 @@ pub unsafe fn clone_with_namespaces<F>(
 ) -> SecurityResult<pid_t> {
     // Allocate stack for child process
     const STACK_SIZE: usize = 1024 * 1024; // 1MB stack
-    let stack: Vec<u8> = vec![0u8; STACK_SIZE];
+    let mut stack: Vec<u8> = vec![0u8; STACK_SIZE];
 
     // Stack grows downward, so point to the end
     let stack_ptr = unsafe { stack.as_mut_ptr().add(STACK_SIZE) } as *mut c_void;

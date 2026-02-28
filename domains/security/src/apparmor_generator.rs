@@ -11,7 +11,7 @@
 //
 // Each layer has veto power - if any layer denies, the operation is blocked.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
