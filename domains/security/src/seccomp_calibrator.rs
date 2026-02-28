@@ -2,7 +2,7 @@
 //
 // This module implements strace analysis and syscall profiling
 
-use crate::error::{SecurityError, SecurityResult};
+use crate::error::SecurityResult;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

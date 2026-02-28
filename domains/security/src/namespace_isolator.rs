@@ -579,6 +579,14 @@ impl Drop for NamespaceIsolator {
 /// # Returns
 /// * `Ok(pid)` - PID of the child process (in parent)
 /// * `Err(SecurityError)` - Error if clone fails
+///
+/// # Safety
+/// This function is unsafe because:
+/// - It calls the raw `libc::clone` syscall which requires careful handling of memory safety
+/// - The `stack_ptr` must point to valid memory that remains valid during the child's execution
+/// - The `child_func` must be a function pointer valid for the entire child process lifetime
+/// - The `flags` must contain valid CLONE_* constants
+/// - Caller is responsible for correctly managing the child process lifecycle
 pub unsafe fn clone_with_namespaces<F>(
     flags: c_int,
     child_func: extern "C" fn(*mut c_void) -> c_int,
@@ -587,11 +595,15 @@ pub unsafe fn clone_with_namespaces<F>(
     // Allocate stack for child process
     const STACK_SIZE: usize = 1024 * 1024; // 1MB stack
     let mut stack: Vec<u8> = vec![0u8; STACK_SIZE];
+    // Allocate stack for child process
+    const STACK_SIZE: usize = 1024 * 1024; // 1MB stack
+    let mut stack: Vec<u8> = vec![0u8; STACK_SIZE];
 
     // Stack grows downward, so point to the end
     let stack_ptr = unsafe { stack.as_mut_ptr().add(STACK_SIZE) } as *mut c_void;
 
     // Call clone syscall
+    #[allow(clippy::unnecessary_cast)]
     let pid = unsafe { libc::clone(child_func, stack_ptr, flags, arg, std::ptr::null_mut() as *mut c_void, std::ptr::null_mut() as *mut c_void, std::ptr::null_mut() as *mut c_void) };
 
     if pid == -1 {
