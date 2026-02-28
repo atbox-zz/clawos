@@ -497,6 +497,7 @@ impl Cgroup {
         }
 
         Err(BridgeError::with_code(ErrorCode::EIO, "CPU usage not found in cgroup stat"))
+    }
 
     pub async fn get_pid_count(&self) -> BridgeResult<u64> {
         let closed = self.closed.lock().await;
