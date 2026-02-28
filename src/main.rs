@@ -9,7 +9,7 @@
 
 use anyhow::Result;
 use std::env;
-use tracing::{info, error, Level};
+use tracing::{info, error};
 use tokio::signal;
 
 // Note: In a full implementation, these would re-export from domain crates
