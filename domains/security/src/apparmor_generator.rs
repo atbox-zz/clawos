@@ -535,13 +535,13 @@ impl AppArmorProfile {
         output.push_str(&format!("# Security Level: {}\n", self.security_level));
         output.push_str(&format!("# Owner: {}\n", self.owner));
         output.push_str(&format!("# Status: {}\n", self.status));
-        output.push_str("\n");
+        output.push('\n');
 
         // Includes
         for include in &self.includes {
             output.push_str(&format!("#include <{}>\n", include));
         }
-        output.push_str("\n");
+        output.push('\n');
 
         // Profile declaration
         let flags_str = if self.flags.is_empty() {
@@ -607,7 +607,7 @@ impl AppArmorProfile {
                 }
                 // Validate port range
                 if let Some(p) = port {
-                    if *p == 0 || *p > 65535 {
+                    if *p == 0 {
                         anyhow::bail!("Invalid port number: {}", p);
                     }
                 }

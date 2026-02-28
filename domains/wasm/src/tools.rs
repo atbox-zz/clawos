@@ -44,9 +44,9 @@ impl ToolRegistry {
     }
 
     /// Store WASM binary for a tool
-    fn store_wasm_binary(&self, tool_name: &str, binary: &[u8]) -> Result<(), BridgeError> {
+    fn store_wasm_binary(&self, tool_name: &str, _binary: &[u8]) -> Result<(), BridgeError> {
         let tool_dir = self.tools_path.join(tool_name);
-        let binary_path = tool_dir.join("tool.wasm");
+        let _binary_path = tool_dir.join("tool.wasm");
 
         if tool_name.contains('/') || tool_name.contains("..") {
             return Err(BridgeError::with_code(

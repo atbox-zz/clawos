@@ -59,8 +59,7 @@ impl ErrorCode {
     pub fn from_errno(errno: i32) -> Self {
         match errno {
             0 => ErrorCode::Success,
-            libc::EAGAIN => ErrorCode::EAgain,
-            libc::EWOULDBLOCK => ErrorCode::EAgain,
+            libc::EAGAIN | libc::EWOULDBLOCK => ErrorCode::EAgain,
             libc::EIO => ErrorCode::EIO,
             libc::ENOENT => ErrorCode::ENOENT,
             libc::EPERM => ErrorCode::EPERM,
@@ -86,6 +85,7 @@ impl ErrorCode {
             libc::EBADF => ErrorCode::EBADF,
             _ => ErrorCode::EInternal,
         }
+    }
     }
 
     pub fn as_errno(&self) -> i32 {

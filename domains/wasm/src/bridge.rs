@@ -115,7 +115,7 @@ impl WasmBridge {
     pub async fn open(&self, path: &str, flags: u32, mode: u32) -> BridgeResult<u64> {
         debug!("Opening file: {} (flags: {}, mode: {})", path, flags, mode);
 
-        let open_flags = match flags {
+        let _open_flags = match flags {
             0 => libc::O_RDONLY,
             1 => libc::O_WRONLY,
             2 => libc::O_RDWR,
