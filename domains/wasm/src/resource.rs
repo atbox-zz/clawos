@@ -472,8 +472,8 @@ impl Cgroup {
         let usage = std::fs::read_to_string(&memory_current_path)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
-        Ok(usage.trim().parse::<u64>()
-            .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse memory usage"))?)
+        usage.trim().parse::<u64>()
+            .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse memory usage"))
     }
 
     pub async fn get_cpu_usage(&self) -> BridgeResult<u64> {
@@ -491,8 +491,8 @@ impl Cgroup {
             if line.starts_with("usage_usec ") {
                 let usage_usec = line.split_whitespace().nth(1)
                     .ok_or_else(|| BridgeError::with_code(ErrorCode::EIO, "Failed to parse CPU usage"))?;
-                return Ok(usage_usec.parse::<u64>()
-                    .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse CPU usage"))? * 1000);
+                usage_usec.parse::<u64>()
+                    .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse CPU usage")) * 1000
             }
         }
 
@@ -510,8 +510,8 @@ impl Cgroup {
         let count = std::fs::read_to_string(&pids_current_path)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
-        Ok(count.trim().parse::<u64>()
-            .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse PID count"))?)
+        count.trim().parse::<u64>()
+            .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse PID count"))
     }
 
     pub async fn close(&self) -> BridgeResult<()> {
@@ -562,10 +562,8 @@ impl Device {
             _ => return Err(BridgeError::with_code(ErrorCode::EINVAL, "Invalid open flags")),
         };
 
-        let file = unsafe {
-            std::fs::File::open(&self.path)
-                .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?
-        };
+        let file = std::fs::File::open(&self.path)
+                .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
         let mut fd = self.file.lock().await;
         *fd = Some(file);

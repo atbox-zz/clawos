@@ -233,8 +233,8 @@ impl CgroupManager {
         let usage = std::fs::read_to_string(&memory_current_path)
             .map_err(|e| BridgeError::Cgroup(format!("Failed to read memory.current: {}", e)))?;
 
-        Ok(usage.trim().parse::<u64>()
-            .map_err(|_| BridgeError::Cgroup("Failed to parse memory usage".to_string()))?)
+        usage.trim().parse::<u64>()
+            .map_err(|_| BridgeError::Cgroup("Failed to parse memory usage".to_string()))
     }
 
     pub fn get_cpu_usage(&self, path: &str) -> BridgeResult<u64> {
@@ -259,8 +259,8 @@ impl CgroupManager {
         let count = std::fs::read_to_string(&pids_current_path)
             .map_err(|e| BridgeError::Cgroup(format!("Failed to read pids.current: {}", e)))?;
 
-        Ok(count.trim().parse::<u64>()
-            .map_err(|_| BridgeError::Cgroup("Failed to parse PID count".to_string()))?)
+        count.trim().parse::<u64>()
+            .map_err(|_| BridgeError::Cgroup("Failed to parse PID count".to_string()))
     }
 
     pub fn setup_wasm_slice(&self) -> BridgeResult<String> {
