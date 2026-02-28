@@ -87,8 +87,8 @@ All P2 deliverables have been implemented, including the critical policy logic a
 | WASM            | domains/wasm/            | COMPLETE     | 2200       | P2.6               |
 | Filesystem      | domains/filesystem/      | COMPLETE     | 2400       | P2.7               |
 | Core Dev        | domains/core-dev/        | COMPLETE     | 1500       | P2.5               |
-| Main Entry      | src/                    | COMPLETE     | 126        | P2.5 / D-01        |
-| WIT Definitions | wit/                    | COMPLETE     | 351        | P1.1 / D-04        |
+| Main Entry      | src/                     | COMPLETE     | 126        | P2.5 / D-01        |
+| WIT Definitions | wit/                     | COMPLETE     | 351        | P1.1 / D-04        |
 | Infra           | domains/infra/           | PARTIAL      | 70         | P4.2               |
 | Observability   | domains/observability/   | PARTIAL      | 185        | P4.3-P4.8          |
 
@@ -97,31 +97,31 @@ All P2 deliverables have been implemented, including the critical policy logic a
 
 All major TODOs completed. Only integration testing and full domain wiring remain.
 
-| Item                                | Location                 | Required For       | Status       |
-| ---------------------------------- | ------------------------ | ------------------ | ------------ |
-| **LSM file_open policy**            | P2-Engine/main.rs:160    | P2.3 / B-03        | COMPLETE     |
-| **LSM socket_connect policy**       | P2-Engine/main.rs:168    | P2.3 / B-03        | COMPLETE     |
-| **Gate checks (G-01)**              | P2-Engine/mod.rs:279    | P2.5 / D-07        | COMPLETE     |
-| **Main entry point**                  | src/main.rs               | P2.5 / D-01        | COMPLETE     |
-| **WIT definitions**                   | wit/                     | P1.1 / D-04        | COMPLETE     |
-| **Domain integration wiring**       | workspace cargo deps    | P2 overall         | TODO         |
-| **Integration testing**            | tests/                   | P2/P4 gates        | NOT STARTED  |
+| Item                               | Location                | Required For       | Status       |
+| ---------------------------------- | ----------------------- | ------------------ | ------------ |
+| **LSM file_open policy**           | P2-Engine/main.rs:160   | P2.3 / B-03        | COMPLETE     |
+| **LSM socket_connect policy**      | P2-Engine/main.rs:168   | P2.3 / B-03        | COMPLETE     |
+| **Gate checks (G-01)**             | P2-Engine/mod.rs:279    | P2.5 / D-07        | COMPLETE     |
+| **Main entry point**               | src/main.rs             | P2.5 / D-01        | COMPLETE     |
+| **WIT definitions**                | wit/                    | P1.1 / D-04        | COMPLETE     |
+| **Domain integration wiring**      | workspace cargo deps    | P2 overall         | TODO         |
+| **Integration testing**            | tests/                  | P2/P4 gates        | NOT STARTED  |
 
 ### Phase 2 Deliverables Status
 
-| ID    | Deliverable             | Status     | Notes                              |
-| ----- | ----------------------- | ---------- | ---------------------------------- |
-| P2.1  | Kernel Config script    | COMPLETE   | kernel/generate-kernel-config.sh   |
-| P2.2  | seccomp-BPF filter      | COMPLETE   | domains/security/ (800+ lines)     |
-| P2.3  | eBPF Aya-rs program     | COMPLETE   | Hooks + policies completed         |
-| P2.4  | Namespace isolator      | COMPLETE   | domains/security/ (1000+ lines)    |
-| P2.5  | Agent Loop service      | COMPLETE   | domains/core-dev/ + main entry point |
-| P2.6  | WASM Runtime bridge     | COMPLETE   | domains/wasm/ (2200 lines)          |
-| P2.7  | ClawFS skeleton        | COMPLETE   | domains/filesystem/ (2400 lines)    |
-| P2.8  | AppArmor generator     | COMPLETE   | domains/security/ (2192 lines)      |
-| P2.6     | WASM Runtime bridge     | COMPLETE   | domains/wasm/ (2200 lines)         |
-| P2.7     | ClawFS skeleton         | COMPLETE   | domains/filesystem/ (2400 lines)   |
-| P2.8     | AppArmor generator      | COMPLETE   | domains/security/ (2192 lines)     |
+| ID    | Deliverable            | Status     | Notes                                |
+| ----- | ---------------------- | ---------- | ------------------------------------ |
+| P2.1  | Kernel Config script   | COMPLETE   | kernel/generate-kernel-config.sh     |
+| P2.2  | seccomp-BPF filter     | COMPLETE   | domains/security/ (800+ lines)       |
+| P2.3  | eBPF Aya-rs program    | COMPLETE   | Hooks + policies completed           |
+| P2.4  | Namespace isolator     | COMPLETE   | domains/security/ (1000+ lines)      |
+| P2.5  | Agent Loop service     | COMPLETE   | domains/core-dev/ + main entry point |
+| P2.6  | WASM Runtime bridge    | COMPLETE   | domains/wasm/ (2200 lines)           |
+| P2.7  | ClawFS skeleton        | COMPLETE   | domains/filesystem/ (2400 lines)     |
+| P2.8  | AppArmor generator     | COMPLETE   | domains/security/ (2192 lines)       |
+| P2.6  | WASM Runtime bridge    | COMPLETE   | domains/wasm/ (2200 lines)           |
+| P2.7  | ClawFS skeleton        | COMPLETE   | domains/filesystem/ (2400 lines)     |
+| P2.8  | AppArmor generator     | COMPLETE   | domains/security/ (2192 lines)       |
 
 **Gate P2:** PENDING (requires cargo build --release, clippy zero warnings, Linux kernel)
 
@@ -210,41 +210,42 @@ Layer 1  Hardware Trust     TPM 2.0 + Secure Boot + eBPF JIT + MODULE_SIG_FORCE 
 
 ## Technology Stack (Locked Versions)
 
-| Technology      | Version        | Purpose                      | Status            |
-| --------------- | -------------- | ---------------------------- | ----------------- |
-| Linux Kernel    | 6.6 LTS        | Main kernel (eBPF + BTF)     | CONFIG ONLY       |
-| Rust            | 1.85+          | Core development             | ACTIVE            |
-| aya-rs          | 0.13+          | eBPF framework               | ACTIVE            |
-| wasmtime        | 27+            | WASM runtime                 | ACTIVE            |
-| SQLite          | 3.47+          | ClawFS backend               | ACTIVE            |
-| libseccomp      | 2.5+           | seccomp-BPF                  | ACTIVE            |
-| AppArmor        | 3.1+           | LSM profiles                 | ACTIVE            |
-| buildroot       | 2024.11+       | Minimal rootfs               | NOT STARTED       |
+| Technology      | Version        | Purpose                      | Status        |
+| --------------- | -------------- | ---------------------------- | ------------- |
+| Linux Kernel    | 6.6 LTS        | Main kernel (eBPF + BTF)     | CONFIG ONLY   |
+| Rust            | 1.85+          | Core development             | ACTIVE        |
+| aya-rs          | 0.13+          | eBPF framework               | ACTIVE        |
+| wasmtime        | 27+            | WASM runtime                 | ACTIVE        |
+| SQLite          | 3.47+          | ClawFS backend               | ACTIVE        |
+| libseccomp      | 2.5+           | seccomp-BPF                  | ACTIVE        |
+| AppArmor        | 3.1+           | LSM profiles                 | ACTIVE        |
+| buildroot       | 2024.11+       | Minimal rootfs               | NOT STARTED   |
+| SQLite          | 3.47+          | ClawFS backend               | ACTIVE        |
 
 ---
 
 ## Code Distribution by Domain
 
-| Domain           | Files    | Lines        | Percentage     | Status         |
-| ---------------- | -------- | ------------ | -------------- | -------------- |
-| security         | 5        | 3800         | 37%            | COMPLETE       |
-| filesystem       | 5        | 2400         | 24%            | COMPLETE       |
-| wasm             | 6        | 2200         | 22%            | COMPLETE       |
-| core-dev         | 4        | 1500         | 15%            | COMPLETE       |
-| ebpf             | 5        | 851          | 8%             | 90%            |
-| kernel/scripts   | 1        | 550          | 1%             | COMPLETE       |
-| **TOTAL**        | **26**   | **11,301**   | **100%**       | **~75%**       |
+| Domain           | Files  | Lines     | Percentage  | Status   |
+| ---------------- | -------| ----------| ------------| ---------|
+| security         | 5      | 3800      | 37%         | COMPLETE |
+| filesystem       | 5      | 2400      | 24%         | COMPLETE |
+| wasm             | 6      | 2200      | 22%         | COMPLETE |
+| core-dev         | 4      | 1500      | 15%         | COMPLETE |
+| ebpf             | 5      | 851       | 8%          | 90%      |
+| kernel/scripts   | 1      | 550       | 1%          | COMPLETE |
+| **TOTAL**        | **26** | **11,301**| **100%**    | **~75%** |
 
 ---
 
 ## Critical Gaps Summary
 
-| Gap                              | Phase     | Priority     | Impact                                                | Effort             |
-| -------------------------------- | -------- | ------------ | ----------------------------------------------------- | ------------------ |
-| **Domain integration wiring**      | P2        | HIGH         | Workspace dependencies need testing               | ~50 lines          |
-| **All P3 data loading**            | P3        | HIGH         | Empty database, no tools, no channels             | ~2000+ lines       |
-| **Integration testing**            | P4        | MEDIUM       | Zero evidence of end-to-end validation            | ~1000 lines        |
-| **Buildroot ISO**                  | P2/P4     | MEDIUM       | Cannot deploy or test                              | T+ days            |
+| Gap                           | Phase  | Priority | Impact                                 | Effort       |
+| ------------------------------| ------ | ---------| ---------------------------------------| ------------ |
+| **Domain integration wiring** | P2     | HIGH     | Workspace dependencies need testing    | ~50 lines    |
+| **All P3 data loading**       | P3     | HIGH     | Empty database, no tools, no channels  | ~2000+ lines |
+| **Integration testing**       | P4     | MEDIUM   | Zero evidence of end-to-end validation | ~1000 lines  |
+| **Buildroot ISO**             | P2/P4  | MEDIUM   | Cannot deploy or test                  | T+ days      |
 ---
 
 ## Next Steps (Implementation Priority)

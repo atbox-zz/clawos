@@ -126,7 +126,7 @@ impl FileDescriptor {
             uid: 0,
             gid: 0,
             blksize: 4096,
-            blocks: (metadata.len() + 511) / 512,
+            blocks: metadata.len().div_ceil(512),
         })
     }
 
@@ -300,19 +300,13 @@ impl MemoryRegion {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Socket {
     fd: Arc<Mutex<Option<std::net::TcpStream>>>,
     closed: Arc<Mutex<bool>>,
 }
 
-impl Socket {
-    pub fn new() -> Self {
-        Socket {
-            fd: Arc::new(Mutex::new(None)),
-            closed: Arc::new(Mutex::new(false)),
-        }
-    }
+impl Socket {}
 
     pub async fn connect(&self, host: &str, port: u16) -> BridgeResult<()> {
         let mut closed = self.closed.lock().await;
@@ -487,16 +481,15 @@ impl Cgroup {
         let stat = std::fs::read_to_string(&cpu_stat_path)
             .map_err(|e| BridgeError::with_code(ErrorCode::from_errno(e.raw_os_error().unwrap_or(libc::EIO)), e.to_string()))?;
 
-        for line in stat.lines() {
-            if line.starts_with("usage_usec ") {
-                let usage_usec = line.split_whitespace().nth(1)
-                    .ok_or_else(|| BridgeError::with_code(ErrorCode::EIO, "Failed to parse CPU usage"))?;
-                return Ok(usage_usec.parse::<u64>()
-                    .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse CPU usage"))? * 1000);
-            }
-        }
-
-        Err(BridgeError::with_code(ErrorCode::EIO, "CPU usage not found in cgroup stat"))
+        stat.lines()
+            .find(|line| line.starts_with("usage_usec "))
+            .and_then(|line| line.split_whitespace().nth(1))
+            .ok_or_else(|| BridgeError::with_code(ErrorCode::EIO, "CPU usage not found in cgroup stat"))
+            .and_then(|usage_usec| 
+                usage_usec.parse::<u64>()
+                    .map_err(|_| BridgeError::with_code(ErrorCode::EIO, "Failed to parse CPU usage"))
+            )
+            .map(|usage_usec| usage_usec * 1000)
     }
 
     pub async fn get_pid_count(&self) -> BridgeResult<u64> {
