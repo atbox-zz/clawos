@@ -12,39 +12,39 @@
 ClawOS is an AI-Native Operating System that embeds the IronClaw AI Agent engine directly into the Linux Kernel.
 The project has completed all design and architecture specifications, but implementation varies significantly by phase.
 
-| Aspect                   | Status                | Notes                                                        |
-| ------------------------ | --------------------- | ------------------------------------------------------------ |
-| **Design & Specs**       | 100% Complete         | All 32 design tasks frozen (P1: 8, P2: 8, P3: 8, P4: 8)      |
-| **Architecture**         | 100% Defined          | 7-layer defense-in-depth model fully specified               |
-| **P1 Implementation**    | 100% Complete         | All specifications frozen, vaulted, SHA256 signed            |
-| **P2 Implementation**    | 100% Complete         | All TODOs completed, TODOs: 0/5 |
-| **P3 Implementation**    | ~0% Complete          | Documentation only, no data loading implemented              |
-| **P4 Implementation**    | ~50% Complete         | Calibration code exists, untested                            |
+| Aspect                | Status         | Notes                                                   |
+| ----------------------| ---------------| --------------------------------------------------------|
+| **Design & Specs**    | 100% Complete  | All 32 design tasks frozen (P1: 8, P2: 8, P3: 8, P4: 8) |
+| **Architecture**      | 100% Defined   | 7-layer defense-in-depth model fully specified          |
+| **P1 Implementation** | 100% Complete  | All specifications frozen, vaulted, SHA256 signed       |
+| **P2 Implementation** | 100% Complete  | All TODOs completed, TODOs: 0/5                         |
+| **P3 Implementation** | ~0% Complete   | Documentation only, no data loading implemented         |
+| **P4 Implementation** | ~50% Complete  | Calibration code exists, untested                       |
 
 ---
 
 ## Project Statistics
 
-| Metric                            | Value                           |
-| --------------------------------- | ------------------------------- |
-| **Total Design Tasks**            | 32/32 complete                  |
-| **Total Implementation Tasks**    | ~12-15/32 complete              |
-| **Total Phases**                  | 4 phases                        |
-| **AI Agents Coordinated**         | 8 specialized agents            |
-| **Lines of Rust Code**            | ~12,000 lines (domains/)        |
-| **Specification Documents**       | 25 documents                    |
-| **Specifications Size**           | ~660 KB (P1 + P3 + P4 docs)     |
+| Metric                         | Value                       |
+| ------------------------------ | --------------------------- |
+| **Total Design Tasks**         | 32/32 complete              |
+| **Total Implementation Tasks** | ~12-15/32 complete          |
+| **Total Phases**               | 4 phases                    |
+| **AI Agents Coordinated**      | 8 specialized agents        |
+| **Lines of Rust Code**         | ~12,000 lines (domains/)    |
+| **Specification Documents**    | 25 documents                |
+| **Specifications Size**        | ~660 KB (P1 + P3 + P4 docs) |
 
 ---
 
 ## Phase Overview
 
-| Phase                        | Tasks    | Design Status    | Implementation Status      | Gate Status     | Overall Progress       |
-| ---------------------------- | -------- | ---------------- | -------------------------- | --------------- | ---------------------- |
-| **P1** - Build Standards     | 8/8      | 100%             | 100% (frozen specs)        | PASSED          | 100%                   |
-| **P2** - Build Engine        | 8/8      | 100%             | 100% (TODOs completed)       | PENDING         | 100%                   |
-| **P3** - Fill Data           | 8/8      | 100%             | ~0%                        | PENDING         | ~0%                    |
-| **P4** - Calibrate           | 8/8      | 100%             | ~50%                       | PENDING         | ~50%                   |
+| Phase                    | Tasks | Design Status | Implementation Status  | Gate Status | Overall Progress |
+| -------------------------| ------| ------------- | ---------------------- | ------------| ---------------- |
+| **P1** - Build Standards | 8/8   | 100%          | 100% (frozen specs)    | PASSED      | 100%             |
+| **P2** - Build Engine    | 8/8   | 100%          | 100% (TODOs completed) | PENDING     | 100%             |
+| **P3** - Fill Data       | 8/8   | 100%          | ~0%                    | PENDING     | ~0%              |
+| **P4** - Calibrate       | 8/8   | 100%          | ~50%                   | PENDING     | ~50%             |
 
 **Overall Design Completion:** 32/32 tasks (100%)
 **Overall Implementation Completion:** ~16-18/32 tasks (50-56%)
@@ -58,14 +58,14 @@ The project has completed all design and architecture specifications, but implem
 
 All P1 specifications frozen, SHA256 signed, and vaulted.
 
-| ID      | Deliverable                 | File                                            | Size       | SHA256               |
-| ------- | --------------------------- | ----------------------------------------------- | ---------- | -------------------- |
-| P1.1    | WIT Interface Spec          | specs/p1/P1.1-wit-interface-spec.md             | 76KB       | c2983e...c6398       |
-| P1.2    | seccomp whitelist schema    | specs/p1/P1.2-seccomp-whitelist.schema.json     | 9KB        | 302faf...3e14de      |
-| P1.3    | eBPF event structs          | specs/p1/P1.3-ebpf-event-structs.md             | 29KB       | 8a4180...258c05b     |
-| P1.4    | ClawFS spec                 | specs/p1/P1.4-clawfs-spec.md                    | 30KB       | 01fb46...68b6a90     |
-| P1.5    | cgroup quotas               | specs/p1/P1.5-cgroup-quotas.json                | 20KB       | 99e8f5...8cd434f     |
-| P1.6    | AppArmor rules              | specs/p1/P1.6-apparmor-rules.md                 | 51KB       | 55a58f...efc4b2d     |
+| ID      | Deliverable                 | File                                        | Size | SHA256               |
+| ------- | --------------------------- | --------------------------------------------| -----| -------------------- |
+| P1.1    | WIT Interface Spec          | specs/p1/P1.1-wit-interface-spec.md         | 76KB | c2983e...c6398       |
+| P1.2    | seccomp whitelist schema    | specs/p1/P1.2-seccomp-whitelist.schema.json | 9KB  | 302faf...3e14de      |
+| P1.3    | eBPF event structs          | specs/p1/P1.3-ebpf-event-structs.md         | 29KB | 8a4180...258c05b     |
+| P1.4    | ClawFS spec                 | specs/p1/P1.4-clawfs-spec.md                | 30KB | 01fb46...68b6a90     |
+| P1.5    | cgroup quotas               | specs/p1/P1.5-cgroup-quotas.json            | 20KB | 99e8f5...8cd434f     |
+| P1.6    | AppArmor rules              | specs/p1/P1.6-apparmor-rules.md             | 51KB | 55a58f...efc4b2d     |
 | P1.7    | IPC protocol                | specs/p1/P1.7-ipc-protocol.md                   | 29KB       | 60e386...c6e6aa      |
 | P1.8    | Public API                  | specs/p1/P1.8-public-api.md                     | 64KB       | 9e4c50...ab85a1b     |
 
@@ -78,7 +78,8 @@ All P1 specifications frozen, SHA256 signed, and vaulted.
 
 ### Status: Implementation Complete
 
-All P2 deliverables have been implemented, including the critical policy logic and main entry point. The 5 TODOs remaining have been completed.
+All P2 deliverables have been implemented, including the critical policy logic and main entry point. 
+The 5 TODOs remaining have been completed.
 
 | Domain          | Location                 | Status       | Lines      | P2 Deliverable     |
 | --------------- | ------------------------ | ------------ | ---------- | ------------------ |
@@ -133,16 +134,16 @@ All major TODOs completed. Only integration testing and full domain wiring remai
 
 All P3 deliverables are fully documented in docs/P3.*.md, but no actual data loading has been implemented.
 
-| ID       | Deliverable                 | Documentation                                 | Implementation     | Status         |
-| -------- | --------------------------- | --------------------------------------------- | ------------------ | -------------- |
-| P3.1     | Tool library migration      | docs/P3.1-tool-migration.md (41KB)            | None               | Design only    |
-| P3.2     | Channel repackaging         | docs/P3.2-channels-repackaging.md (58KB)      | None               | Design only    |
-| P3.3     | PG -> ClawFS migration      | docs/P3.3-postgres-migration.md (41KB)        | None               | Design only    |
-| P3.4     | Identity initialization     | docs/P3.4-identity-initialization.md          | None               | Design only    |
-| P3.5     | Prompt Injection defense    | docs/P3.5-prompt-injection-defense.md         | None               | Design only    |
-| P3.6     | Endpoint allowlist          | docs/P3.6-endpoint-allowlist.md               | None               | Design only    |
-| P3.7     | LLM Provider config         | docs/P3.7-llm-provider-bridge.md              | None               | Design only    |
-| P3.8     | Secrets key init            | docs/P3.8-secrets-key-init.md                 | None               | Design only    |
+| ID       | Deliverable                 | Documentation                           | Implementation | Status      |
+| -------- | --------------------------- | ----------------------------------------| -------------- | ----------- |
+| P3.1     | Tool library migration      | docs/P3.1-tool-migration.md (41KB)      | None        | Design only    |
+| P3.2     | Channel repackaging         | docs/P3.2-channels-repackaging.md (58KB)| None        | Design only    |
+| P3.3     | PG -> ClawFS migration      | docs/P3.3-postgres-migration.md (41KB)  | None        | Design only    |
+| P3.4     | Identity initialization     | docs/P3.4-identity-initialization.md    | None        | Design only    |
+| P3.5     | Prompt Injection defense    | docs/P3.5-prompt-injection-defense.md   | None        | Design only    |
+| P3.6     | Endpoint allowlist          | docs/P3.6-endpoint-allowlist.md         | None        | Design only    |
+| P3.7     | LLM Provider config         | docs/P3.7-llm-provider-bridge.md        | None        | Design only    |
+| P3.8     | Secrets key init            | docs/P3.8-secrets-key-init.md           | None        | Design only    |
 
 ### Required Directories (Missing)
 
@@ -162,16 +163,16 @@ All P3 deliverables are fully documented in docs/P3.*.md, but no actual data loa
 
 Calibration implementation code exists in domains/infra/ and domains/observability/, but no validation or performance testing has been performed.
 
-| ID       | Deliverable                  | Documentation                               | Implementation     | Status       |
-| -------- | ---------------------------- | ------------------------------------------- | ------------------ | ------------ |
-| P4.1     | seccomp whitelist pruning    | docs/P4.1-seccomp-pruning.md                | Code exists        | Untested     |
-| P4.2     | cgroup calibration           | docs/P4.2-cgroup-calibration.md             | ~70 lines          | Untested     |
-| P4.3     | eBPF Ring Buffer tuning      | docs/P4.3-ebpf-ringbuffer-tuning.md         | ~185 lines         | Untested     |
-| P4.4     | WASM memory/CPU tuning       | docs/P4.4-wasm-tuning.md                    | Combined           | Untested     |
-| P4.5     | ClawFS HNSW tuning           | docs/P4.5-clawfs-hnsw-tuning.md             | Combined           | Untested     |
-| P4.6     | AppArmor refinement          | docs/P4.6-apparmor-refinement.md            | Combined           | Untested     |
-| P4.7     | XDP performance test         | docs/P4.7-xdp-performance.md                | Combined           | Untested     |
-| P4.8     | Integration test             | docs/P4.8-integration-security-report.md    | Combined           | Untested     |
+| ID       | Deliverable                  | Documentation                            | Implementation | Status   |
+| -------- | ---------------------------- | -----------------------------------------| ---------------| ---------|
+| P4.1     | seccomp whitelist pruning    | docs/P4.1-seccomp-pruning.md             | Code exists    | Untested |
+| P4.2     | cgroup calibration           | docs/P4.2-cgroup-calibration.md          | ~70 lines      | Untested |
+| P4.3     | eBPF Ring Buffer tuning      | docs/P4.3-ebpf-ringbuffer-tuning.md      | ~185 lines     | Untested |
+| P4.4     | WASM memory/CPU tuning       | docs/P4.4-wasm-tuning.md                 | Combined       | Untested |
+| P4.5     | ClawFS HNSW tuning           | docs/P4.5-clawfs-hnsw-tuning.md          | Combined       | Untested |
+| P4.6     | AppArmor refinement          | docs/P4.6-apparmor-refinement.md         | Combined       | Untested |
+| P4.7     | XDP performance test         | docs/P4.7-xdp-performance.md             | Combined       | Untested |
+| P4.8     | Integration test             | docs/P4.8-integration-security-report.md | Combined       | Untested |
 
 **Calibration Code:** ~360 lines total (domains/infra + domains/observability)
 
