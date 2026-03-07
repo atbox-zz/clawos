@@ -296,6 +296,13 @@ pub struct Socket {
 }
 
 impl Socket {
+    pub fn new() -> Self {
+        Socket {
+            fd: Arc::new(Mutex::new(None)),
+            closed: Arc::new(Mutex::new(false)),
+        }
+    }
+
     pub async fn connect(&self, host: &str, port: u16) -> BridgeResult<()> {
         if *self.closed.lock().await {
             return Err(BridgeError::with_code(ErrorCode::ResourceClosed, "Socket closed"));
@@ -369,7 +376,7 @@ impl Socket {
         *fd = None;
         debug!("Socket closed");
         Ok(())
-}
+    }
 }
 
 #[derive(Debug)]
