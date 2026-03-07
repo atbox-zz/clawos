@@ -206,8 +206,8 @@ impl DirectoryEntry {
         *closed = true;
         debug!("Directory entry closed: {}", self.path);
         Ok(())
+ }
 }
-
 #[derive(Debug)]
 pub struct MemoryRegion {
     data: Arc<Mutex<Vec<u8>>>,
@@ -369,6 +369,7 @@ impl Socket {
         *fd = None;
         debug!("Socket closed");
         Ok(())
+}
 }
 
 #[derive(Debug)]
