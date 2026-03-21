@@ -1,17 +1,22 @@
 ---
 name: clawos
-description: >
+
+description: 
   Use this skill when building, extending, or operating ClawOS — an AI-Native Operating System
   based on nearai/ironclaw and Linux Kernel 6.6 LTS.
   
-Triggers include: any mention of "ClawOS", "IronClaw kernel", "eBPF agent",
+Triggers include: 
+  any mention of "ClawOS", "IronClaw kernel", "eBPF agent",
   "ClawFS", "AI OS", "Kernel Agent", seccomp/namespace/cgroup hardening for
   AI workloads, or WASM sandbox kernel integration. Also use when planning or
   executing multi-phase AI agent workflows for OS-level Rust projects.
+
 version: 1.0.0
+
 license: Apache-2.0 / MIT (inherited from nearai/ironclaw)
-authors:
-  - ClawOS Project (Claude/Anthropic assisted)
+
+authors: ClawOS Project (Claude/Anthropic assisted)
+
 date: 2026-02-23
 ---
 
@@ -433,7 +438,7 @@ Every task submitted to an AI agent must conform to this schema:
 
 ```yaml
 task_id:           # Format: {Domain}-{seq}, e.g. A-01, B-03
-| P2 | P3 |
+| P2               | P3                                       |
 agent:             # Responsible agent name
 depends_on:        # List of task IDs that must be DONE before this starts
 inputs:            # List of artifact paths to read from ClawFS
