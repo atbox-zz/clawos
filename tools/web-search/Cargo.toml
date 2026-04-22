@@ -1,0 +1,18 @@
+[package]
+name    = "web-search"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name         = "web_search"
+path         = "src/lib.rs"
+crate-type   = ["cdylib"]  # Required for WASM component build
+
+[dependencies]
+serde       = { version = "1", features = ["derive"], default-features = false }
+serde_json  = { version = "1", default-features = false, features = ["alloc"] }
+
+# tracing is only used on non-wasm targets (debug builds); wasm build excludes it.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tracing     = { version = "0.1", default-features = false }
+

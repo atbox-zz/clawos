@@ -1,0 +1,50 @@
+# /etc/clawos/config.toml
+# ClawOS Agent Configuration
+# Copy to /etc/clawos/config.toml or set CLAWOS_CONFIG=/path/to/this
+
+[clawfs]
+db_path     = "/var/lib/clawos/clawfs.db"
+# key_source options:
+#   "keyring"          — kernel keyring (production)
+#   "env:CLAWFS_KEY"   — hex key from environment (dev)
+#   "dev_random"       — random key per-process (testing only, data non-persistent)
+key_source   = "env:CLAWFS_KEY"
+vector_dims  = 1536   # P1.4 frozen — must match embeddings model
+hnsw_m       = 16
+hnsw_ef_construction = 200
+
+[wasm]
+#max_stack_bytes = 4194304    # 4MB
+max_stack_bytes  = 1024768    # 1MB
+max_memory_bytes = 134217728  # 128MB
+tools_dir        = "/var/lib/clawos/tools"
+
+[llm]
+backend         = "near_ai"
+base_url        = "https://api.near.ai/v1"
+model           = "near-ai/llama-3.3-70b-instruct"
+api_key_secret  = "clawos-llm-api-key"  # name in kernel keyring
+
+[security]
+# HTTP endpoint allowlist for WASM tools
+allowed_endpoints = [
+    { host = "api.search.brave.com",  port = 443, paths = ["/res/v1/web/search"], methods = ["GET"] },
+    { host = "api.tavily.com",        port = 443, paths = ["/search"], methods = ["POST"] },
+    { host = "api.near.ai",           port = 443, paths = ["/v1/*"], methods = ["GET", "POST"] },
+    { host = "api.telegram.org",      port = 443, paths = ["/bot*/sendMessage", "/bot*/getMe"], methods = ["POST", "GET"] },
+]
+allowed_read_paths  = ["/var/lib/clawos/workspace/**"]
+allowed_write_paths = ["/var/lib/clawos/workspace/**"]
+
+# Override defaults:
+# cgroup_path = "/sys/fs/cgroup/clawos/agent"
+# profile     = "agent_process"
+# ipc_socket  = "/var/run/clawos/ipc/agent.sock"
+
+[channels.web_gateway]
+enabled = true
+bind    = "127.0.0.1:8080"
+
+[channels.telegram]
+enabled      = false   # set true + configure webhook after bot token is in keyring
+webhook_port = 8443

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://clawos.dev/schemas/ipc-protocol/v1.0",
+  "version": "1.0.0",
+  "frozen": true,
+  "phase": "P1",
+  "description": "ClawOS inter-agent IPC protocol. All agents communicate through this protocol. Transport is Unix domain sockets in the agent cgroup namespace.",
+
+  "transport": {
+    "type": "unix_domain_socket",
+    "socket_path": "/var/run/clawos/ipc/{agent-name}.sock",
+    "encoding": "newline-delimited JSON (NDJSON)",
+    "max_message_bytes": 1048576,
+    "note": "1MB max per message. Larger payloads use ClawFS staging."
+  },
+
+  "message_envelope": {
+    "description": "Every IPC message is wrapped in this envelope",
+    "fields": {
+      "id":         { "type": "string",  "format": "uuid-v4",    "required": true,  "note": "Unique message ID for deduplication" },
+      "version":    { "type": "integer", "value": 1,             "required": true  },
+      "type":       { "type": "string",  "enum": ["request","response","event","error"], "required": true },
+      "from":       { "type": "string",  "note": "Sending agent name",  "required": true },
+      "to":         { "type": "string",  "note": "Target agent name or 'broadcast'", "required": true },
+      "timestamp":  { "type": "integer", "note": "Unix epoch ms",       "required": true },
+      "correlation_id": { "type": "string", "note": "Links response to request",   "required": false },
+      "payload":    { "type": "object",  "note": "Message-type-specific content",  "required": true }
+    }
+  },
+
+  "message_types": {
+    "task.assign": {
+      "description": "Coordinator assigns a task to a worker agent",
+      "payload": {
+        "task_id":         "string  — e.g. A-01",
+        "phase":           "string  — P1|P2|P3|P4",
+        "inputs":          "array   — ClawFS paths to read",
+        "outputs":         "array   — ClawFS paths to write",
+        "timeout_minutes": "integer",
+        "frozen_spec_deps":"object  — {path: sha256}"
+      }
+    },
+    "task.status": {
+      "description": "Agent reports progress on a task",
+      "payload": {
+        "task_id": "string",
+        "status":  "string — queued|running|blocked|done|failed",
+        "progress": "integer — 0-100",
+        "message":  "string — human-readable status"
+      }
+    },
+    "task.complete": {
+      "description": "Agent signals task completion with output artifacts",
+      "payload": {
+        "task_id":        "string",
+        "outputs":        "object — {path: sha256} for each output artifact",
+        "validation_exit_code": "integer — 0 = passed"
+      }
+    },
+    "task.failed": {
+      "description": "Agent signals task failure and triggers rollback",
+      "payload": {
+        "task_id":       "string",
+        "error_code":    "string",
+        "error_message": "string",
+        "rollback_performed": "boolean"
+      }
+    },
+    "gate.check": {
+      "description": "Request a Gate validation check before phase transition",
+      "payload": {
+        "gate": "string — e.g. P1_TO_P2",
+        "artifacts": "object — {spec_id: sha256}"
+      }
+    },
+    "gate.result": {
+      "description": "Gate validation result",
+      "payload": {
+        "gate":   "string",
+        "passed": "boolean",
+        "checks": "array — [{name, passed, detail}]"
+      }
+    },
+    "security.alert": {
+      "description": "Security Agent broadcasts a security event (from eBPF)",
+      "payload": {
+        "event_kind":  "string — matches EventKind in ebpf-event-structs.rs",
+        "severity":    "string — info|low|medium|high|critical",
+        "pid":         "integer",
+        "details":     "string",
+        "action_taken":"string — logged|warned|killed|blocked"
+      }
+    },
+    "spec.freeze": {
+      "description": "Security Agent announces a spec is frozen (P1 gate)",
+      "payload": {
+        "spec_id":  "string — e.g. P1.2",
+        "path":     "string — ClawFS path",
+        "sha256":   "string",
+        "frozen_at":"integer — Unix epoch ms"
+      }
+    }
+  },
+
+  "error_codes": {
+    "E001": "UNAUTHORIZED — message from agent not permitted to send this type",
+    "E002": "SPEC_HASH_MISMATCH — frozen spec dependency hash does not match Vault",
+    "E003": "TASK_DEPENDENCY_NOT_MET — depends_on task not in DONE state",
+    "E004": "TIMEOUT — task exceeded timeout_minutes",
+    "E005": "SCOPE_VIOLATION — agent attempted operation outside its domain",
+    "E006": "GATE_BLOCKED — phase transition denied by Gate check",
+    "E007": "ROLLBACK_FAILED — rollback command returned non-zero",
+    "E008": "RESOURCE_EXHAUSTED — cgroup limit hit during execution"
+  },
+
+  "gate": {
+    "sha256": "PENDING"
+  }
+}

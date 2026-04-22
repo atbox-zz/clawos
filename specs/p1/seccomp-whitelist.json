@@ -1,0 +1,119 @@
+{
+  "$schema": "https://clawos.dev/schemas/seccomp-whitelist/v1.0",
+  "version": "1.0.0",
+  "frozen": true,
+  "phase": "P1",
+  "description": "IronClaw/ClawOS process seccomp-BPF syscall whitelist. FROZEN in P1. Any modification requires dual-agent review (Security + Core Dev) and version bump.",
+  "default_action": "SCMP_ACT_KILL_PROCESS",
+  "categories": {
+    "memory": {
+      "description": "Memory management — required by Rust allocator and tokio",
+      "syscalls": ["mmap", "munmap", "mprotect", "brk", "madvise", "mlock", "munlock"]
+    },
+    "file_io": {
+      "description": "File operations — minimal set for ClawFS access",
+      "syscalls": [
+        "read", "write", "pread64", "pwrite64",
+        "readv", "writev",
+        "open", "openat", "openat2",
+        "close", "close_range",
+        "stat", "fstat", "lstat", "newfstatat", "statx",
+        "lseek", "fcntl", "ioctl",
+        "fsync", "fdatasync",
+        "getcwd"
+      ]
+    },
+    "process": {
+      "description": "Process/thread control — required by tokio runtime",
+      "syscalls": [
+        "exit", "exit_group",
+        "getpid", "getppid", "gettid",
+        "getuid", "getgid", "geteuid", "getegid",
+        "futex", "set_robust_list", "get_robust_list",
+        "clone", "clone3",
+        "wait4", "waitid",
+        "prctl",
+        "arch_prctl",
+        "set_tid_address"
+      ]
+    },
+    "network": {
+      "description": "Network — ONLY PostgreSQL/ClawFS connection (port enforced at XDP layer)",
+      "syscalls": [
+        "socket", "connect", "bind",
+        "recv", "send",
+        "recvfrom", "sendto",
+        "recvmsg", "sendmsg",
+        "setsockopt", "getsockopt",
+        "getsockname", "getpeername",
+        "shutdown",
+        "poll", "ppoll",
+        "select", "pselect6",
+        "epoll_create1", "epoll_ctl", "epoll_wait", "epoll_pwait"
+      ]
+    },
+    "signals": {
+      "description": "Signal handling",
+      "syscalls": [
+        "rt_sigaction", "rt_sigprocmask", "rt_sigreturn",
+        "rt_sigpending", "rt_sigsuspend",
+        "sigaltstack", "kill", "tgkill"
+      ]
+    },
+    "time": {
+      "description": "Time operations",
+      "syscalls": [
+        "clock_gettime", "clock_nanosleep", "clock_getres",
+        "gettimeofday", "nanosleep",
+        "timer_create", "timer_settime", "timer_gettime", "timer_delete"
+      ]
+    },
+    "ipc": {
+      "description": "IPC mechanisms for agent communication",
+      "syscalls": [
+        "pipe2", "eventfd2",
+        "read", "write"
+      ]
+    },
+    "misc": {
+      "description": "Miscellaneous — required by Rust std and tokio",
+      "syscalls": [
+        "getrandom",
+        "uname",
+        "getrlimit", "setrlimit", "prlimit64",
+        "sysinfo",
+        "rseq"
+      ]
+    },
+    "wasm_jit": {
+      "description": "Required by wasmtime JIT compilation — SECURITY NOTE: monitored by eBPF",
+      "syscalls": ["mmap", "mprotect"],
+      "restrictions": {
+        "mprotect": {
+          "note": "Only PROT_READ|PROT_EXEC transitions allowed (W^X enforced)",
+          "forbidden_flags": ["PROT_WRITE|PROT_EXEC"]
+        }
+      }
+    }
+  },
+  "forbidden": {
+    "description": "Explicitly forbidden syscalls — any attempt triggers SIGKILL",
+    "syscalls": [
+      "ptrace",
+      "process_vm_readv", "process_vm_writev",
+      "kexec_load", "kexec_file_load",
+      "reboot",
+      "mount", "umount2", "pivot_root",
+      "init_module", "finit_module", "delete_module",
+      "perf_event_open",
+      "quotactl",
+      "acct"
+    ]
+  },
+  "gate": {
+    "validation_cmd": "cargo test -- seccomp",
+    "strace_analysis_task": "C-02",
+    "review_required_by": ["Security Agent", "Core Dev Agent"],
+    "sha256": "PENDING_AFTER_STRACE_C02"
+  }
+}

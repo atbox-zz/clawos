@@ -1,0 +1,41 @@
+# Secrets — NEVER commit these
+.env
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+vault/*.json
+
+# Build artifacts
+target/
+*.wasm
+*.iso
+*.img
+
+# Calibration and security reports (contain system internals)
+/var/lib/clawos/
+calibration-*.json
+security-report-*.json
+benchmark-*.json
+
+# Kernel build artifacts
+kernel/linux-*/
+kernel/*.gz
+kernel/*.bz2
+buildroot-*/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Test artifacts
+/tmp/clawos-*
+strace-*.txt
+boot-*.log
+
+# Rust toolchain
+rust-toolchain.toml.bak

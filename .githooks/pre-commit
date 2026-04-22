@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+# Install with: git config core.hooksPath .githooks
+# Or: cp .githooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -euo pipefail
+
+RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[0;33m"; NC="\033[0m"
+fail() { echo -e "${RED}✗ pre-commit BLOCKED:${NC} $*"; exit 1; }
+warn() { echo -e "${YELLOW}⚠${NC} $*"; }
+ok()   { echo -e "${GREEN}✓${NC} $*"; }
+
+echo "── ClawOS pre-commit checks ──────────────────────────"
+
+# ── 1. Block .env file commits ────────────────────────────────
+if git diff --cached --name-only | grep -qE "^\.env$"; then
+    fail ".env file staged — NEVER commit secrets. Use .env.example instead."
+fi
+
+# ── 2. Scan for potential secrets in staged files ─────────────
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(rs|toml|json|sh|py|yaml|yml)$' || true)
+if [[ -n "${STAGED}" ]]; then
+    SECRET_PATTERNS=(
+        'sk-[a-zA-Z0-9]{40,}'        # OpenAI key pattern
+        'Bearer [a-zA-Z0-9_\-]{20,}' # Bearer token
+        'AAAA[a-zA-Z0-9/+]{50,}'     # SSH private key start
+        'ey[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+'  # JWT
+        'password\s*=\s*["\x27][^"\x27]{8,}' # hardcoded password
+    )
+
+    for pattern in "${SECRET_PATTERNS[@]}"; do
+        MATCHES=$(git diff --cached -U0 | grep "^+" | grep -iE "${pattern}" || true)
+        if [[ -n "${MATCHES}" ]]; then
+            warn "Potential secret pattern matched: ${pattern}"
+            echo "${MATCHES}" | head -3
+            fail "Possible secret in staged changes. Use env vars or kernel keyring."
+        fi
+    done
+    ok "No secret patterns found in staged files"
+fi
+
+# ── 3. Frozen spec integrity check ────────────────────────────
+SPEC_CHANGED=$(git diff --cached --name-only | grep "specs/p1/" || true)
+if [[ -n "${SPEC_CHANGED}" ]]; then
+    warn "Frozen P1 spec modified: ${SPEC_CHANGED}"
+    echo "  Frozen specs require dual-agent review (RULE-001)."
+    echo "  Proceed only if Security Agent + Core Dev Agent have approved."
+    read -r -p "  Type 'I HAVE APPROVAL' to continue: " CONFIRM
+    if [[ "${CONFIRM}" != "I HAVE APPROVAL" ]]; then
+        fail "Frozen spec modification blocked — get dual-agent approval first"
+    fi
+fi
+
+# ── 4. cargo check (fast: no compile, just type-check) ────────
+echo "Running cargo check..."
+if ! cargo check --workspace --quiet 2>&1; then
+    fail "cargo check failed — fix compilation errors before committing"
+fi
+ok "cargo check passed"
+
+# ── 5. cargo fmt check ────────────────────────────────────────
+if ! cargo fmt --all -- --check 2>&1; then
+    fail "cargo fmt check failed — run 'cargo fmt --all' before committing"
+fi
+ok "cargo fmt OK"
+
+echo -e "\n${GREEN}All pre-commit checks passed ✓${NC}"

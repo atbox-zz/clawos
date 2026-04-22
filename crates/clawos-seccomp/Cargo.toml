@@ -1,0 +1,22 @@
+[package]
+name        = "clawos-seccomp"
+description = "ClawOS seccomp-BPF filter — syscall whitelist enforcement (P1.2)"
+version.workspace    = true
+edition.workspace    = true
+rust-version.workspace = true
+license.workspace    = true
+
+[lib]
+name = "clawos_seccomp"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow.workspace    = true
+thiserror.workspace = true
+tracing.workspace   = true
+libseccomp.workspace = true
+serde.workspace     = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

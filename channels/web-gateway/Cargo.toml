@@ -1,0 +1,23 @@
+[package]
+name    = "web-gateway"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "web_gateway"
+path = "src/lib.rs"
+
+[dependencies]
+tokio         = { version = "1", features = ["full"] }
+axum          = { version = "0.7", features = ["ws"] }
+futures-util  = { version = "0.3" }
+tokio-stream  = { version = "0.1", features = ["sync"] }
+serde         = { version = "1", features = ["derive"] }
+serde_json    = { version = "1" }
+anyhow        = { version = "1" }
+tracing       = { version = "0.1" }
+uuid          = { version = "1", features = ["v4"] }
+chrono        = { version = "0.4" }
+
+[dev-dependencies]
+tokio-test = "0.4"

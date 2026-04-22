@@ -1,0 +1,44 @@
+[package]
+name = "clawos-agent"
+description = "ClawOS AI Agent Loop — core orchestration service"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "clawos-agent"
+path = "src/main.rs"
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+wasmtime.workspace = true
+nix.workspace = true
+libc.workspace = true
+libseccomp.workspace = true
+axum.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+bytes.workspace = true
+once_cell.workspace = true
+parking_lot.workspace = true
+regex = "1"
+ring.workspace = true
+
+clawfs = { path = "../clawfs" }
+clawos-seccomp = { path = "../clawos-seccomp" }
+clawos-ns = { path = "../clawos-ns" }
+clawos-llm = { path = "../clawos-llm" }
+reqwest.workspace = true
+
+dotenvy = "0.15"
+toml = "0.8"
+
+web-gateway = { path = "../../channels/web-gateway" }
+telegram    = { path = "../../channels/telegram" }

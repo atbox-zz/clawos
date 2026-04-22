@@ -1,0 +1,143 @@
+# image/Dockerfile.dev
+# ClawOS development container.
+# Contains: Rust toolchain, cross-compilation targets, eBPF toolchain,
+# SQLite, Python3, keyutils, strace, bpftool.
+# Does NOT replicate kernel isolation — for that, boot the ISO.
+
+FROM ubuntu:24.04 AS base
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH \
+    CLAWOS_LOG=clawos=info \
+    CLAWFS_DB=/var/lib/clawos/clawfs.db
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build essentials
+    build-essential \
+    pkg-config \
+    clang \
+    lld \
+    llvm \
+    cmake \
+    # Cross-compilation (musl)
+    musl-tools \
+    musl-dev \
+    # Security tools
+    libseccomp-dev \
+    libseccomp2 \
+    keyutils \
+    apparmor \
+    apparmor-utils \
+    # eBPF tools
+    libbpf-dev \
+    linux-tools-generic \
+    bpftrace \
+    strace \
+    # Database
+    libsqlite3-dev \
+    sqlite3 \
+    # Network
+    iproute2 \
+    iptables \
+    # Python (migration scripts)
+    python3 \
+    python3-pip \
+    python3-psycopg2 \
+    # Utilities
+    curl \
+    wget \
+    git \
+    jq \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Rust toolchain ────────────────────────────────────────────
+FROM base AS rust
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --default-toolchain stable --no-modify-path
+
+RUN rustup target add \
+    x86_64-unknown-linux-musl \
+    wasm32-wasi \
+    wasm32-unknown-unknown \
+    aarch64-unknown-linux-musl \
+    bpfel-unknown-none \
+    bpfeb-unknown-none
+
+# Install cargo tools
+RUN cargo install \
+    cargo-audit \
+    cargo-component \
+    --locked 2>/dev/null || true
+
+# ── ClawOS source ─────────────────────────────────────────────
+FROM rust AS clawos-dev
+
+WORKDIR /workspace
+
+# Copy workspace files
+COPY Cargo.toml Cargo.lock* ./
+COPY crates/ ./crates/
+COPY channels/ ./channels/
+COPY tools/ ./tools/
+COPY wit/ ./wit/
+COPY specs/ ./specs/
+COPY config/ ./config/
+COPY scripts/ ./scripts/
+COPY migrations/ ./migrations/
+COPY .cargo/ ./.cargo/
+
+# Pre-fetch dependencies (layer cache)
+RUN cargo fetch
+
+# System directories
+RUN mkdir -p \
+    /var/lib/clawos/{tools,workspace,logs,secrets,vault} \
+    /var/run/clawos/ipc \
+    /etc/clawos \
+    /sys/fs/cgroup/clawos/agent
+
+# Install default config
+RUN cp config/config.toml /etc/clawos/config.toml
+
+# Generate a dev ClawFS key
+RUN CLAWFS_KEY=$(openssl rand -hex 32) && \
+    echo "CLAWFS_KEY=${CLAWFS_KEY}" > /etc/clawos/dev.env && \
+    echo "Generated dev ClawFS key"
+
+# Build debug binary
+RUN cargo build -p clawos-agent 2>&1 | tail -5
+
+# ── Entrypoint ────────────────────────────────────────────────
+COPY <<'EOF' /usr/local/bin/clawos-entrypoint.sh
+#!/bin/bash
+set -e
+
+# Load dev env
+source /etc/clawos/dev.env 2>/dev/null || true
+source /workspace/.env 2>/dev/null || true
+
+echo "ClawOS dev container ready."
+echo "  clawfs.db: ${CLAWFS_DB}"
+echo "  config:    /etc/clawos/config.toml"
+echo ""
+echo "Quick start:"
+echo "  cargo build -p clawos-agent && cargo test --workspace"
+echo "  make test"
+echo ""
+exec "$@"
+EOF
+RUN chmod +x /usr/local/bin/clawos-entrypoint.sh
+
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/clawos-entrypoint.sh"]
+CMD ["bash"]
+
+# ── Labels ────────────────────────────────────────────────────
+LABEL org.opencontainers.image.title="ClawOS Dev Container"
+LABEL org.opencontainers.image.description="ClawOS development environment with Rust, eBPF tools, and all dependencies"
+LABEL org.opencontainers.image.source="https://github.com/atbox-zz/clawos"

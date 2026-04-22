@@ -1,0 +1,21 @@
+[package]
+name        = "clawos-ns"
+description = "ClawOS namespace isolation — user, PID, mount, network namespaces (C-03, C-04, C-05)"
+version.workspace    = true
+edition.workspace    = true
+rust-version.workspace = true
+license.workspace    = true
+
+[lib]
+name = "clawos_ns"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow.workspace    = true
+thiserror.workspace = true
+tracing.workspace   = true
+nix.workspace       = true
+libc.workspace      = true
+
+[dev-dependencies]
+tempfile.workspace = true

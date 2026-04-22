@@ -1,0 +1,33 @@
+[package]
+name = "clawos-ebpf-userspace"
+description = "ClawOS eBPF userspace daemon — loader, ring-buffer reader, anomaly engine, Prometheus metrics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = ["ebpf-embed"]
+ebpf-embed = []
+
+[[bin]]
+name = "clawos-ebpf-userspace"
+path = "src/main.rs"
+
+[dependencies]
+tokio.workspace       = true
+serde.workspace       = true
+serde_json.workspace  = true
+anyhow.workspace      = true
+tracing.workspace     = true
+tracing-subscriber.workspace = true
+aya.workspace         = true
+aya-log.workspace     = true
+axum.workspace        = true
+uuid.workspace        = true
+chrono.workspace      = true
+prometheus-client.workspace = true
+nix.workspace         = true
+
+[dev-dependencies]
+tempfile.workspace = true

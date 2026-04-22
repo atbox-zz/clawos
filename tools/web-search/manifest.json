@@ -1,0 +1,42 @@
+{
+  "name": "web-search",
+  "version": "0.1.0",
+  "description": "Search the web using a configured search API. Returns top-k results with title, URL, and snippet.",
+  "capabilities": ["HttpFetch"],
+  "wasm_path": "tool.wasm",
+  "wit_world": "clawos-tool",
+  "input_schema": {
+    "type": "object",
+    "required": ["query"],
+    "properties": {
+      "query":   { "type": "string",  "description": "Search query" },
+      "top_k":   { "type": "integer", "default": 5, "maximum": 10 },
+      "lang":    { "type": "string",  "default": "en" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title":   { "type": "string" },
+            "url":     { "type": "string" },
+            "snippet": { "type": "string" },
+            "score":   { "type": "number" }
+          }
+        }
+      },
+      "query":       { "type": "string" },
+      "result_count": { "type": "integer" }
+    }
+  },
+  "allowed_endpoints": [
+    { "host": "api.search.brave.com",    "paths": ["/res/v1/web/search"] },
+    { "host": "serpapi.com",             "paths": ["/search"] },
+    { "host": "api.tavily.com",          "paths": ["/search"] }
+  ],
+  "rate_limit": { "requests_per_minute": 30 }
+}

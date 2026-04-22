@@ -1,0 +1,203 @@
+// ============================================================
+// ClawOS WIT Interface Specification — v1.0 FROZEN (P1.1)
+// ============================================================
+// wit/clawos.wit
+//
+// This defines the stable ABI between WASM tools/channels and
+// the ClawOS host runtime. FROZEN in P1. Any addition is a
+// minor version bump; any removal/modification is BREAKING.
+//
+// Follows: WASM Component Model + WIT IDL spec
+// ============================================================
+
+package clawos:runtime@1.0.0;
+
+// ── Core Types ──────────────────────────────────────────────
+
+/// A capability token granting access to a specific host resource.
+/// Tools receive only the capabilities explicitly granted by policy.
+type capability-token = u64;
+
+/// Monotonic nanosecond timestamp (from kernel clock).
+type timestamp-ns = u64;
+
+/// Result type for all fallible host calls.
+variant host-error {
+    permission-denied(string),
+    not-found(string),
+    timeout,
+    resource-exhausted(string),
+    invalid-input(string),
+    internal(string),
+}
+
+// ── File System Interface (ClawFS) ───────────────────────────
+
+interface clawfs {
+    use host-error;
+
+    /// Read a file from the agent's workspace.
+    /// Path is relative to /var/lib/clawos/workspace/{agent-id}/
+    read-file:  func(path: string, cap: capability-token)
+                    -> result<list<u8>, host-error>;
+
+    /// Write a file to the agent's workspace.
+    write-file: func(path: string, data: list<u8>, cap: capability-token)
+                    -> result<_, host-error>;
+
+    /// List directory contents.
+    list-dir:   func(path: string, cap: capability-token)
+                    -> result<list<string>, host-error>;
+
+    /// Delete a file (irreversible — logged by eBPF).
+    delete-file: func(path: string, cap: capability-token)
+                    -> result<_, host-error>;
+
+    /// Vector similarity search across the workspace memory store.
+    /// Returns (path, score) pairs, highest score first.
+    vector-search: func(
+        query-embedding: list<f32>,
+        top-k: u32,
+        cap: capability-token
+    ) -> result<list<tuple<string, f32>>, host-error>;
+
+    /// Full-text search using FTS5.
+    text-search: func(
+        query: string,
+        top-k: u32,
+        cap: capability-token
+    ) -> result<list<tuple<string, f32>>, host-error>;
+}
+
+// ── HTTP Client Interface ────────────────────────────────────
+
+interface http-client {
+    use host-error;
+
+    record http-request {
+        method:  string,      // GET | POST | PUT | DELETE | PATCH
+        url:     string,      // Must be in endpoint allowlist
+        headers: list<tuple<string, string>>,
+        body:    option<list<u8>>,
+    }
+
+    record http-response {
+        status:  u16,
+        headers: list<tuple<string, string>>,
+        body:    list<u8>,
+    }
+
+    /// Make an HTTP request. URL is checked against the endpoint allowlist
+    /// at the host boundary BEFORE the request is sent.
+    /// Credentials are injected by the host — WASM code never sees raw secrets.
+    fetch: func(req: http-request, cap: capability-token)
+               -> result<http-response, host-error>;
+}
+
+// ── Secrets Interface ────────────────────────────────────────
+
+interface secrets {
+    use host-error;
+
+    /// Request injection of a secret into an HTTP request header.
+    /// The WASM tool never receives the secret value directly.
+    /// The host injects it at the network boundary.
+    inject-header: func(
+        secret-name: string,
+        header-name: string,
+        cap:         capability-token
+    ) -> result<_, host-error>;
+
+    /// Check if a secret is available (without revealing its value).
+    has-secret: func(secret-name: string, cap: capability-token) -> bool;
+}
+
+// ── LLM Interface ────────────────────────────────────────────
+
+interface llm {
+    use host-error;
+    use timestamp-ns;
+
+    record message {
+        role:    string,   // system | user | assistant | tool
+        content: string,
+    }
+
+    record completion-request {
+        messages:   list<message>,
+        model:      option<string>,   // null = use agent default
+        max-tokens: option<u32>,
+        temperature: option<f32>,
+    }
+
+    record completion-response {
+        content:    string,
+        model:      string,
+        usage-tokens: u32,
+        finish-reason: string,
+    }
+
+    /// Call the LLM. Rate-limited by the host per-tool.
+    complete: func(req: completion-request, cap: capability-token)
+                  -> result<completion-response, host-error>;
+}
+
+// ── Tool Invocation Interface ─────────────────────────────────
+
+interface tool-invoke {
+    use host-error;
+
+    /// Invoke another registered ClawOS tool by name.
+    /// Tools can chain, but depth is capped at 4 to prevent recursion.
+    invoke: func(
+        tool-name: string,
+        input-json: string,
+        cap: capability-token
+    ) -> result<string, host-error>;   // returns JSON output
+}
+
+// ── Logging Interface ─────────────────────────────────────────
+
+interface log {
+    enum level { trace, debug, info, warn, error }
+
+    /// Structured log entry. Written to ClawFS agent log + eBPF ring buffer.
+    write: func(level: level, message: string, fields-json: option<string>);
+}
+
+// ── World Definition ──────────────────────────────────────────
+
+/// The world a ClawOS WASM tool lives in.
+/// Tools import host capabilities and export their run function.
+world clawos-tool {
+    import clawfs;
+    import http-client;
+    import secrets;
+    import llm;
+    import tool-invoke;
+    import log;
+
+    /// Entry point called by the Agent runtime.
+    /// input: JSON string with tool arguments
+    /// returns: JSON string with tool output, or error string
+    export run: func(input-json: string) -> result<string, string>;
+}
+
+/// The world a ClawOS WASM channel lives in.
+/// Channels are long-running; they receive messages and emit agent events.
+world clawos-channel {
+    import clawfs;
+    import log;
+
+    /// Called when an inbound message arrives on this channel.
+    export handle-inbound: func(
+        channel-id: string,
+        message-json: string
+    ) -> result<option<string>, string>;
+
+    /// Called to send a reply outbound via this channel.
+    export send-outbound: func(
+        channel-id: string,
+        message-json: string
+    ) -> result<_, string>;
+}

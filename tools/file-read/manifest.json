@@ -1,0 +1,28 @@
+{
+  "name": "file-read",
+  "version": "0.1.0",
+  "description": "Read a file from the ClawFS workspace. Supports plain text, JSON, TOML, Markdown. Returns content with optional line range.",
+  "capabilities": ["FsRead"],
+  "wasm_path": "tool.wasm",
+  "wit_world": "clawos-tool",
+  "input_schema": {
+    "type": "object",
+    "required": ["path"],
+    "properties": {
+      "path":       { "type": "string",  "description": "ClawFS workspace path" },
+      "start_line": { "type": "integer", "description": "1-indexed start line (optional)" },
+      "end_line":   { "type": "integer", "description": "1-indexed end line (optional)" },
+      "encoding":   { "type": "string",  "default": "utf8", "enum": ["utf8", "hex"] }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "content":    { "type": "string" },
+      "line_count": { "type": "integer" },
+      "size_bytes": { "type": "integer" },
+      "path":       { "type": "string" }
+    }
+  },
+  "rate_limit": { "requests_per_minute": 120 }
+}

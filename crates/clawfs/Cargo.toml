@@ -1,0 +1,36 @@
+[package]
+name        = "clawfs"
+description = "ClawOS Filesystem — SQLite + HNSW vectors + AES-256-GCM + immutable Vault"
+version.workspace    = true
+edition.workspace    = true
+rust-version.workspace = true
+license.workspace    = true
+
+[features]
+keyutils = []
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(clawfs_allow_env_key)'] }
+
+[lib]
+name = "clawfs"
+path = "src/lib.rs"
+
+[dependencies]
+tokio.workspace      = true
+serde.workspace      = true
+serde_json.workspace = true
+anyhow.workspace     = true
+thiserror.workspace  = true
+tracing.workspace    = true
+rusqlite.workspace   = true
+ring.workspace       = true
+aes-gcm.workspace    = true
+uuid.workspace       = true
+chrono.workspace     = true
+parking_lot.workspace = true
+instant-distance = "0.6"
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio             = { version = "1", features = ["full"] }

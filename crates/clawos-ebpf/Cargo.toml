@@ -1,0 +1,21 @@
+[package]
+name        = "clawos-ebpf"
+description = "ClawOS eBPF kernel programs — tracepoints, LSM hooks, ring buffer"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+
+# This crate is compiled for the eBPF target, not the host
+# Build: cargo build -p clawos-ebpf --target bpfel-unknown-none --release
+
+[[bin]]
+name = "clawos-ebpf"
+path = "src/main.rs"
+
+[dependencies]
+aya-ebpf.workspace     = true
+aya-log-ebpf.workspace = true
+
+#[release]
+#panic = "unwind"
+

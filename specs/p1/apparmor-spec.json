@@ -1,0 +1,135 @@
+{
+  "$schema": "https://clawos.dev/schemas/apparmor-spec/v1.0",
+  "version": "1.0.0",
+  "frozen": true,
+  "phase": "P1",
+  "description": "ClawOS AppArmor profile rule language specification. All F-0x tasks must conform to this spec. Defines allowed rule types, path prefixes, capability set, and denial patterns.",
+  "profiles": {
+    "clawos-agent": {
+      "binary": "/usr/local/bin/clawos-agent",
+      "mode": "enforce",
+      "abi": "4.0",
+      "allowed_read": [
+        "/etc/clawos/**",
+        "/var/lib/clawos/clawfs.db*",
+        "/var/lib/clawos/workspace/**",
+        "/var/lib/clawos/tools/**",
+        "/var/lib/clawos/secrets/*.pem",
+        "/var/lib/clawos/secrets/*.crt",
+        "/proc/self/**",
+        "/sys/fs/cgroup/clawos/agent/cgroup.procs"
+      ],
+      "allowed_write": [
+        "/var/lib/clawos/clawfs.db*",
+        "/var/lib/clawos/workspace/**",
+        "/var/lib/clawos/logs/**",
+        "/var/run/clawos/**",
+        "/tmp/clawos-**",
+        "/sys/fs/cgroup/clawos/agent/cgroup.procs"
+      ],
+      "allowed_exec": [],
+      "capabilities": [
+        "bpf",
+        "perfmon",
+        "net_bind_service"
+      ],
+      "network": [
+        "tcp"
+      ],
+      "denied_paths": [
+        "/etc/passwd",
+        "/etc/shadow",
+        "/root/**",
+        "/home/**",
+        "/proc/*/mem"
+      ]
+    },
+    "clawos-wasm-worker": {
+      "binary": "/usr/local/bin/clawos-agent//clawos-wasm-worker",
+      "mode": "enforce",
+      "allowed_read": [
+        "/var/lib/clawos/workspace/**"
+      ],
+      "allowed_write": [
+        "/var/lib/clawos/workspace/**",
+        "/tmp/clawos-wasm-**"
+      ],
+      "capabilities": [],
+      "network": [],
+      "note": "WASM workers get no network, no caps, no proc access"
+    },
+    "clawos-ebpf": {
+      "binary": "/usr/local/bin/clawos-ebpf-userspace",
+      "mode": "enforce",
+      "allowed_read": [
+        "/sys/fs/bpf/**",
+        "/proc/self/**",
+        "/var/lib/clawos/specs/**"
+      ],
+      "allowed_write": [
+        "/var/run/clawos/**",
+        "/var/lib/clawos/logs/**"
+      ],
+      "capabilities": [
+        "bpf",
+        "perfmon",
+        "sys_admin"
+      ],
+      "network": [
+        "tcp"
+      ],
+      "note": "eBPF daemon needs sys_admin for BTF + bpftool attach"
+    }
+  },
+  "rule_language": {
+    "path_rules": {
+      "r": "read-only",
+      "w": "write (implies create)",
+      "rw": "read-write",
+      "rx": "read + execute",
+      "x": "execute only (rare)",
+      "ix": "inherit exec environment (for subprocess launch)"
+    },
+    "glob_syntax": {
+      "**": "match any path including subdirectories",
+      "*": "match any filename (no slashes)",
+      "?": "match any single character"
+    },
+    "network_rules": {
+      "allowed_families": [
+        "unix",
+        "inet",
+        "inet6"
+      ],
+      "protocol_restriction": "Always specify protocol: tcp | udp | raw",
+      "note": "ClawOS profiles use 'network tcp' only \u2014 no UDP, no raw sockets"
+    }
+  },
+  "mandatory_denials": {
+    "description": "These denials must appear in ALL ClawOS profiles",
+    "paths": [
+      "/etc/passwd",
+      "/etc/shadow",
+      "/etc/sudoers",
+      "/root/**",
+      "/home/**",
+      "/proc/*/mem",
+      "/proc/sysrq-trigger",
+      "/sys/kernel/debug/**"
+    ],
+    "capabilities": [
+      "setuid",
+      "setgid",
+      "sys_ptrace"
+    ],
+    "syscalls": [
+      "ptrace"
+    ]
+  },
+  "gate": {
+    "validation_cmd": "apparmor_parser --verify /etc/apparmor.d/clawos-*",
+    "enforce_cmd": "aa-enforce /etc/apparmor.d/clawos-*",
+    "review_agent": "Security Agent",
+    "sha256": "ada4f366c64d0104f893ec19ac51b47bfeea50dbeb36e2d7936d8c84ebdaa6ed"
+  }
+}

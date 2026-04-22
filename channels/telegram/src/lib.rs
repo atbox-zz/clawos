@@ -1,0 +1,374 @@
+// channels/telegram/src/lib.rs
+//
+// ClawOS Telegram channel — P3.2
+// Repackaged from IronClaw channels-src/telegram
+// Now conforms to ClawOS WIT world: clawos-channel
+//
+// Inbound:  Telegram webhook → AgentMessage
+// Outbound: AgentReply → Telegram sendMessage API
+//
+// FIX (P4): session state and channel config are now persisted to ClawFS
+// via host function calls instead of being held only in-memory.
+// Sessions survive agent restarts and are scoped per chat_id.
+
+use serde::{Deserialize, Serialize};
+// ── Telegram API types ────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct Update {
+    pub update_id: i64,
+    pub message:   Option<TgMessage>,
+    pub callback_query: Option<CallbackQuery>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TgMessage {
+    pub message_id: i64,
+    pub from:       Option<User>,
+    pub chat:       Chat,
+    pub text:       Option<String>,
+    pub date:       i64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct User {
+    pub id:         i64,
+    pub first_name: String,
+    pub username:   Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Chat {
+    pub id:    i64,
+    pub r#type: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CallbackQuery {
+    pub id:   String,
+    pub data: Option<String>,
+    pub message: Option<TgMessage>,
+}
+
+#[derive(Debug, Serialize)]
+struct SendMessageRequest {
+    pub chat_id:    i64,
+    pub text:       String,
+    pub parse_mode: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reply_to_message_id: Option<i64>,
+}
+
+// ── Channel State ─────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelState {
+    pub bot_token_secret: String,    // name in Secrets Vault
+    pub allowed_user_ids: Vec<i64>,  // allowlist — empty = allow all
+    pub webhook_path:     String,
+}
+
+// ── Session state (persisted to ClawFS per chat_id) ───────────
+
+/// Conversation session for one Telegram chat.
+/// Stored at /sessions/telegram/<chat_id>.json in ClawFS.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TelegramSession {
+    pub chat_id:    i64,
+    pub turns:      Vec<SessionTurn>,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionTurn {
+    pub role:    String,   // "user" | "assistant"
+    pub content: String,
+    pub ts:      i64,
+}
+
+impl TelegramSession {
+    pub fn new(chat_id: i64) -> Self {
+        let now = chrono::Utc::now().timestamp_millis();
+        Self { chat_id, turns: vec![], created_at: now, updated_at: now }
+    }
+
+    pub fn add_turn(&mut self, role: impl Into<String>, content: impl Into<String>) {
+        let ts = chrono::Utc::now().timestamp_millis();
+        self.turns.push(SessionTurn { role: role.into(), content: content.into(), ts });
+        self.updated_at = ts;
+        // Keep only the last 20 turns to bound memory and ClawFS size
+        if self.turns.len() > 20 {
+            let drain = self.turns.len() - 20;
+            self.turns.drain(..drain);
+        }
+    }
+}
+
+/// ClawFS path for a Telegram session.
+fn session_path(chat_id: i64) -> String {
+    format!("/sessions/telegram/{chat_id}.json")
+}
+
+/// Load session from ClawFS, creating a fresh one if not found.
+fn load_session(chat_id: i64) -> TelegramSession {
+    let path = session_path(chat_id);
+    match host_clawfs_read(&path) {
+        Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_else(|e| {
+            tracing::warn!(path, error = %e, "Session JSON corrupt, starting fresh");
+            TelegramSession::new(chat_id)
+        }),
+        Err(_) => TelegramSession::new(chat_id), // Not found → new session
+    }
+}
+
+/// Persist session to ClawFS.
+fn save_session(session: &TelegramSession) {
+    let path = session_path(session.chat_id);
+    match serde_json::to_vec(session) {
+        Ok(bytes) => {
+            if let Err(e) = host_clawfs_write(&path, &bytes) {
+                tracing::warn!(path, error = %e, "Failed to persist Telegram session");
+            }
+        }
+        Err(e) => tracing::warn!(error = %e, "Failed to serialise Telegram session"),
+    }
+}
+
+// ── handle_inbound — called by ClawOS runtime on webhook hit ──
+
+pub fn handle_inbound(channel_id: &str, message_json: &str) -> Result<Option<String>, String> {
+    let update: Update = serde_json::from_str(message_json)
+        .map_err(|e| format!("Invalid Telegram update: {e}"))?;
+
+    let (chat_id, text, user_id, msg_id) = match &update.message {
+        Some(msg) => {
+            let text = match &msg.text {
+                Some(t) => t.clone(),
+                None => return Ok(None), // Ignore non-text messages
+            };
+            let uid = msg.from.as_ref().map(|u| u.id).unwrap_or(0);
+            (msg.chat.id, text, uid, Some(msg.message_id))
+        }
+        None => return Ok(None),
+    };
+
+    // Check allowlist
+    let state = load_channel_state(channel_id)?;
+    if !state.allowed_user_ids.is_empty() && !state.allowed_user_ids.contains(&user_id) {
+        return Ok(None); // Silently drop unauthorised users
+    }
+
+    // Load session from ClawFS and append the user's turn
+    let mut session = load_session(chat_id);
+    session.add_turn("user", &text);
+    save_session(&session);
+
+    // Build conversation history for the agent (last 10 turns)
+    let history: Vec<serde_json::Value> = session.turns.iter()
+        .rev().take(10).rev()
+        .map(|t| serde_json::json!({"role": t.role, "content": t.content}))
+        .collect();
+
+    let agent_msg = serde_json::json!({
+        "id":       format!("tg-{}-{}", chat_id, update.update_id),
+        "version":  1,
+        "type":     "request",
+        "from":     channel_id,
+        "to":       "clawos-agent",
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+        "payload": {
+            "content":    text,
+            "channel":    "telegram",
+            "chat_id":    chat_id,
+            "reply_to":   msg_id,
+            "user_id":    user_id,
+            "history":    history,
+        }
+    });
+
+    Ok(Some(agent_msg.to_string()))
+}
+
+// ── send_outbound — sends reply back via Telegram API ─────────
+
+pub fn send_outbound(channel_id: &str, message_json: &str) -> Result<(), String> {
+    let msg: serde_json::Value = serde_json::from_str(message_json)
+        .map_err(|e| format!("Invalid outbound message: {e}"))?;
+
+    let chat_id    = msg["chat_id"].as_i64().ok_or("Missing chat_id")?;
+    let text       = msg["content"].as_str().unwrap_or("(no response)");
+    let reply_to   = msg["reply_to"].as_i64();
+    let formatted  = format_for_telegram(text);
+
+    // Persist assistant turn to ClawFS session
+    let mut session = load_session(chat_id);
+    session.add_turn("assistant", text);
+    save_session(&session);
+
+    let send_req = SendMessageRequest {
+        chat_id,
+        text: formatted,
+        parse_mode: "Markdown".into(),
+        reply_to_message_id: reply_to,
+    };
+
+    let state = load_channel_state(channel_id)?;
+    let url = format!(
+        "https://api.telegram.org/bot{}/sendMessage",
+        state.bot_token_secret
+    );
+
+    let req_json = serde_json::json!({
+        "method": "POST",
+        "url": url,
+        "headers": [["Content-Type", "application/json"]],
+        "body": serde_json::to_string(&send_req).unwrap()
+    });
+
+    let resp_json = host_http_fetch(&req_json.to_string())?;
+    let resp: serde_json::Value = serde_json::from_str(&resp_json)
+        .map_err(|e| format!("Parse error: {e}"))?;
+
+    if resp["status"].as_u64().unwrap_or(0) != 200 {
+        return Err(format!("Telegram API error: {}", resp["body"]));
+    }
+    Ok(())
+}
+
+fn format_for_telegram(text: &str) -> String {
+    let truncated = if text.len() > 4000 {
+        format!("{}…", &text[..4000])
+    } else {
+        text.to_string()
+    };
+    truncated
+}
+
+fn load_channel_state(channel_id: &str) -> Result<ChannelState, String> {
+    // Load from ClawFS at /config/channels/telegram/<channel_id>.json
+    let path = format!("/config/channels/telegram/{channel_id}.json");
+    match host_clawfs_read(&path) {
+        Ok(bytes) => serde_json::from_slice(&bytes)
+            .map_err(|e| format!("Invalid channel config at {path}: {e}")),
+        Err(_) => {
+            // Default config — bot token must be in Secrets Vault
+            Ok(ChannelState {
+                bot_token_secret: "telegram-bot-token".into(),
+                allowed_user_ids: vec![],
+                webhook_path:     format!("/webhook/{channel_id}"),
+            })
+        }
+    }
+}
+
+// ── Host function bridge ──────────────────────────────────────
+
+#[cfg(not(target_arch = "wasm32"))]
+fn host_http_fetch(_req_json: &str) -> Result<String, String> {
+    Ok(serde_json::json!({"status": 200, "body": "{\"ok\":true}"}).to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn host_clawfs_read(_path: &str) -> Result<Vec<u8>, String> {
+    Err("ClawFS not available in native test build".into())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn host_clawfs_write(_path: &str, _data: &[u8]) -> Result<(), String> {
+    Ok(()) // no-op in native tests
+}
+
+#[cfg(target_arch = "wasm32")]
+extern "C" {
+    fn clawos_http_fetch(req_ptr: *const u8, req_len: usize,
+                         out_ptr: *mut u8, out_len: usize) -> i32;
+    fn clawos_clawfs_read(path_ptr: *const u8, path_len: usize,
+                          out_ptr: *mut u8, out_len: usize) -> i32;
+    fn clawos_clawfs_write(path_ptr: *const u8, path_len: usize,
+                           data_ptr: *const u8, data_len: usize) -> i32;
+}
+
+#[cfg(target_arch = "wasm32")]
+fn host_http_fetch(req_json: &str) -> Result<String, String> {
+    let r = req_json.as_bytes();
+    let mut out = vec![0u8; 65536];
+    let n = unsafe { clawos_http_fetch(r.as_ptr(), r.len(), out.as_mut_ptr(), out.len()) };
+    if n < 0 { return Err(format!("HTTP error: {n}")); }
+    String::from_utf8(out[..n as usize].to_vec()).map_err(|e| e.to_string())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn host_clawfs_read(path: &str) -> Result<Vec<u8>, String> {
+    let p = path.as_bytes();
+    let mut out = vec![0u8; 1024 * 1024]; // 1MB max per session
+    let n = unsafe { clawos_clawfs_read(p.as_ptr(), p.len(), out.as_mut_ptr(), out.len()) };
+    if n < 0 { return Err(format!("ClawFS read error: {n}")); }
+    Ok(out[..n as usize].to_vec())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn host_clawfs_write(path: &str, data: &[u8]) -> Result<(), String> {
+    let p = path.as_bytes();
+    let n = unsafe { clawos_clawfs_write(p.as_ptr(), p.len(), data.as_ptr(), data.len()) };
+    if n < 0 { Err(format!("ClawFS write error: {n}")) } else { Ok(()) }
+}
+
+// ── Tests ─────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn handle_inbound_text_message() {
+        let update = serde_json::json!({
+            "update_id": 12345,
+            "message": {
+                "message_id": 1,
+                "from": { "id": 999, "first_name": "Test" },
+                "chat": { "id": -100, "type": "private" },
+                "text": "Hello ClawOS!",
+                "date": 1700000000
+            }
+        });
+        let result = handle_inbound("tg-channel-1", &update.to_string()).unwrap();
+        assert!(result.is_some());
+        let msg: serde_json::Value = serde_json::from_str(&result.unwrap()).unwrap();
+        assert_eq!(msg["payload"]["content"].as_str(), Some("Hello ClawOS!"));
+    }
+
+    #[test]
+    fn handle_inbound_non_text_returns_none() {
+        let update = serde_json::json!({
+            "update_id": 12346,
+            "message": {
+                "message_id": 2,
+                "chat": { "id": -100, "type": "group" },
+                "date": 1700000000
+            }
+        });
+        let result = handle_inbound("tg-channel-1", &update.to_string()).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn session_add_and_trim_to_20_turns() {
+        let mut s = TelegramSession::new(42);
+        for i in 0..25 {
+            s.add_turn("user", format!("msg {i}"));
+        }
+        assert_eq!(s.turns.len(), 20);
+        assert_eq!(s.turns[0].content, "msg 5"); // oldest kept
+    }
+
+    #[test]
+    fn session_serialise_roundtrip() {
+        let mut s = TelegramSession::new(123);
+        s.add_turn("user", "hello");
+        let bytes   = serde_json::to_vec(&s).unwrap();
+        let decoded: TelegramSession = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(decoded.chat_id, 123);
+        assert_eq!(decoded.turns.len(), 1);
+    }
+}

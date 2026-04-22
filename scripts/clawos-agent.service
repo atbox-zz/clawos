@@ -1,0 +1,97 @@
+# /etc/systemd/system/clawos-agent.service
+# G-02: Hardened systemd unit for ClawOS Agent
+# Install: systemctl daemon-reload && systemctl enable clawos-agent
+
+[Unit]
+Description=ClawOS AI Agent Service
+Documentation=https://github.com/atbox-zz/clawos
+After=network.target clawos-ebpf.service clawos-clawfs.service
+Requires=clawos-clawfs.service
+Wants=clawos-ebpf.service
+
+# Pre-flight must pass before we start
+ExecStartPre=/usr/local/bin/clawos-preflight
+
+[Service]
+Type=notify
+User=clawos
+Group=clawos
+UMask=0027
+
+# Launch inside the network namespace set up by setup-netns.sh
+ExecStartPre=/usr/local/bin/clawos-setup-netns
+ExecStart=ip netns exec clawos-agent /usr/local/bin/clawos-agent
+
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
+TimeoutStopSec=30
+KillMode=control-group
+KillSignal=SIGTERM
+
+# ── Restart policy ──────────────────────────────────────────
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# ── Resource limits (backup to cgroup setup) ────────────────
+MemoryMax=512M
+MemorySwapMax=0
+CPUQuota=50%
+TasksMax=128
+LimitNOFILE=1024
+LimitCORE=0
+LimitNPROC=128
+
+# ── Namespace isolation ─────────────────────────────────────
+PrivateTmp=true
+PrivateDevices=true
+PrivateMounts=true
+PrivateUsers=false          # We manage user namespaces manually (C-03)
+ProtectHome=strict
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=false  # Must be false — agent joins its own cgroup
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible       # Hides other processes in /proc
+ProcSubset=pid              # Only see own PIDs in /proc
+
+# ── Filesystem restrictions ─────────────────────────────────
+ReadWritePaths=/var/lib/clawos
+ReadWritePaths=/var/run/clawos
+ReadWritePaths=/var/log/clawos
+ReadOnlyPaths=/etc/clawos
+InaccessiblePaths=/proc/sysrq-trigger /sys/kernel/debug
+
+# ── Capabilities ────────────────────────────────────────────
+CapabilityBoundingSet=CAP_BPF CAP_PERFMON CAP_NET_BIND_SERVICE
+AmbientCapabilities=
+NoNewPrivileges=true
+SecureBits=noroot noroot-locked keep-caps-locked
+
+# ── Syscall filter (redundant with seccomp in binary) ───────
+SystemCallFilter=@system-service @network-io
+SystemCallFilter=~@privileged @resources @mount @reboot @swap @module
+SystemCallErrorNumber=EPERM
+
+# ── Security hardening ──────────────────────────────────────
+KeyringMode=private
+LockPersonality=true
+MemoryDenyWriteExecute=false    # Must be false — wasmtime JIT needs W+X transitions
+RestrictAddressFamilies=AF_UNIX AF_INET
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+
+# ── Logging ─────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=clawos-agent
+Environment=CLAWOS_LOG=clawos=info
+Environment=RUST_BACKTRACE=1
+
+[Install]
+WantedBy=multi-user.target

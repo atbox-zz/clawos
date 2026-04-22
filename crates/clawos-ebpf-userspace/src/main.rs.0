@@ -1,0 +1,66 @@
+use anyhow::{Context, Result};
+use aya::{include_bytes_aligned, maps::RingBuf, programs::{Lsm, TracePoint}, Ebpf};
+use std::time::Duration;
+use tracing::{info, debug, error};
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+struct ClawOsEvent {
+    kind: u32,
+    severity: u8,
+    _pad: [u8; 3],
+    pid: u32,
+    tgid: u32,
+    uid: u32,
+    gid: u32,
+    ppid: u32,
+    _pad2: u32,
+    timestamp_ns: u64,
+    syscall_nr: u64,
+    syscall_arg0: u64,
+    comm: [u8; 16],
+    details: [u8; 176],
+}
+
+const EVENT_SIZE: usize = 256;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    tracing_subscriber::fmt().with_env_filter("info").init();
+    info!("ClawOS eBPF daemon starting");
+
+    let ebpf_bytes = include_bytes_aligned!("../../../target/bpfel-unknown-none/release/clawos-ebpf");
+    let mut bpf = Ebpf::load(ebpf_bytes).context("Failed to load eBPF")?;
+
+    // 附加掛鉤 (略過重複的 attach 邏輯，確保名稱與核心一致)
+    attach_lsm(&mut bpf, "clawos_lsm_file_open", "file_open")?;
+    info!("LSM Hook attached");
+
+    let mut ring_buf: RingBuf<_> = bpf.take_map("EVENTS")
+        .context("Map EVENTS not found")?
+        .try_into()
+        .context("Failed to init RingBuf")?;
+
+    info!("Reading eBPF ring buffer...");
+
+    loop {
+        // 使用 next() 輪詢數據
+        while let Some(item) = ring_buf.next() {
+            info!("Received event from kernel! Length: {}", item.len());
+            if item.len() >= EVENT_SIZE {
+                let evt = unsafe { *(item.as_ptr() as *const ClawOsEvent) };
+                info!("Event Detail: Kind={}, PID={}", evt.kind, evt.pid);
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
+
+fn attach_lsm(bpf: &mut Ebpf, prog: &str, hook: &str) -> Result<()> {
+    let program: &mut Lsm = bpf.program_mut(prog).context("No Prog")?.try_into()?;
+    let btf = aya::Btf::from_sys_fs()?;
+    program.load(hook, &btf)?;
+    program.attach()?;
+    Ok(())
+}
+

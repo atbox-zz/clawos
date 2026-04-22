@@ -1,0 +1,25 @@
+{
+  "name": "web-gateway",
+  "version": "0.1.0",
+  "description": "HTTP REST + SSE + WebSocket gateway. Runs as axum server inside the network namespace. Provides /v1/chat (REST), /v1/chat/stream (SSE), and /v1/ws (WebSocket).",
+  "type": "channel",
+  "wit_world": "clawos-channel",
+  "runtime": "native",
+  "note": "This channel is NOT a WASM component — it runs as native axum inside the agent process. Listed here for registry consistency.",
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "bind_addr":        { "type": "string", "default": "127.0.0.1:8080" },
+      "sse_keepalive_sec": { "type": "integer", "default": 15 },
+      "max_session_idle_sec": { "type": "integer", "default": 300 },
+      "auth_token":       { "type": "string", "description": "Bearer token for /v1/* endpoints. Empty = no auth (dev only)." }
+    }
+  },
+  "endpoints": {
+    "GET /health":         "Health check — no auth required",
+    "POST /v1/chat":       "Synchronous REST chat",
+    "GET /v1/chat/stream": "Server-Sent Events streaming",
+    "GET /v1/ws":          "WebSocket bidirectional"
+  },
+  "rate_limit": { "requests_per_second": 10 }
+}

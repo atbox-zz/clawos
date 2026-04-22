@@ -1,0 +1,225 @@
+name: ClawOS CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  CLAWFS_KEY: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # 64 hex = 32 bytes
+
+jobs:
+  # ── Gate P2 Check: cargo check + clippy ─────────────────────
+  lint:
+    name: Lint (Gate P2 — zero clippy warnings)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system deps
+        run: sudo apt-get install -y libseccomp-dev libsqlite3-dev
+
+      - name: cargo check
+        run: cargo check --workspace --all-targets
+
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy (zero warnings — P2 Gate requirement)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # ── Unit tests ───────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-24.04
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install system deps
+        run: sudo apt-get install -y libseccomp-dev libsqlite3-dev
+
+      - name: cargo test (all workspace crates)
+        run: cargo test --workspace
+
+      - name: Security-specific tests (P3 Gate requirement)
+        run: cargo test --package clawos-seccomp --package clawfs -- --test-threads=1
+
+  # ── Security audit ───────────────────────────────────────────
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: cargo audit
+        uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Build release binary (x86_64 musl) ──────────────────────
+  build-release:
+    name: Build Release (x86_64-musl)
+    runs-on: ubuntu-24.04
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable + musl target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - name: Install musl cross toolchain
+        run: sudo apt-get install -y musl-tools libseccomp-dev
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-musl-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build static binary
+        run: cargo build --package clawos-agent --target x86_64-unknown-linux-musl --release
+
+      - name: Show binary info
+        run: |
+          ls -lh target/x86_64-unknown-linux-musl/release/clawos-agent
+          file target/x86_64-unknown-linux-musl/release/clawos-agent
+          ldd target/x86_64-unknown-linux-musl/release/clawos-agent || echo "Static — no shared libs (expected)"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clawos-agent-x86_64
+          path: target/x86_64-unknown-linux-musl/release/clawos-agent
+          retention-days: 7
+
+  # ── Preflight check simulation ────────────────────────────────
+  preflight-sim:
+    name: Preflight Script (dry-run)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate vault SHA256 entries
+        run: |
+          python3 - <<'PYEOF'
+          import json, hashlib, os, sys
+          errors = 0
+          vault_dir = "vault"
+          if not os.path.exists(vault_dir):
+              print("⚠ vault/ directory missing — run scripts/vault-init.sh")
+              sys.exit(0)
+          for vfile in sorted(os.listdir(vault_dir)):
+              if not vfile.endswith(".json"): continue
+              with open(f"{vault_dir}/{vfile}") as f:
+                  entry = json.load(f)
+              path = entry["path"]
+              if not os.path.exists(path):
+                  print(f"❌ {entry['spec_id']}: file missing: {path}")
+                  errors += 1
+                  continue
+              actual = hashlib.sha256(open(path,'rb').read()).hexdigest()
+              if actual != entry["sha256"]:
+                  print(f"❌ E002 {entry['spec_id']}: hash mismatch")
+                  errors += 1
+              else:
+                  print(f"✅ {entry['spec_id']}: ok")
+          if errors: sys.exit(1)
+          PYEOF
+
+      - name: Validate tool manifests
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys
+          errors = 0
+          for tool_dir in os.listdir("tools"):
+              mfile = f"tools/{tool_dir}/manifest.json"
+              if not os.path.exists(mfile): continue
+              with open(mfile) as f:
+                  m = json.load(f)
+              for field in ["name","version","description","capabilities","wasm_path","wit_world"]:
+                  if field not in m:
+                      print(f"❌ {tool_dir}: missing '{field}'"); errors += 1
+              if m.get("wit_world") not in ("clawos-tool","clawos-channel"):
+                  print(f"❌ {tool_dir}: invalid wit_world"); errors += 1
+              else:
+                  print(f"✅ {tool_dir} manifest ok")
+          if errors: sys.exit(1)
+          PYEOF
+
+      - name: Validate WIT file exists
+        run: |
+          test -f wit/clawos.wit && echo "✅ WIT spec present" || exit 1
+          grep -q "world clawos-tool" wit/clawos.wit && echo "✅ world clawos-tool"
+          grep -q "world clawos-channel" wit/clawos.wit && echo "✅ world clawos-channel"
+
+      - name: Validate AppArmor profile
+        run: |
+          test -f apparmor/clawos-agent && echo "✅ AppArmor profile present" || exit 1
+
+      - name: Validate kernel config
+        run: |
+          test -f kernel/clawos-kernel.config && echo "✅ Kernel config present" || exit 1
+          grep "CONFIG_BPF_LSM=y" kernel/clawos-kernel.config
+          grep "CONFIG_SECCOMP_FILTER=y" kernel/clawos-kernel.config
+          grep "CONFIG_USER_NS=y" kernel/clawos-kernel.config
+          grep "CONFIG_MODULE_SIG_FORCE=y" kernel/clawos-kernel.config
+          echo "✅ All required kernel options present"
+
+  # ── WASM tools build ─────────────────────────────────────────
+  build-tools:
+    name: Build WASM tools
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "wasm32-wasi" }
+      - uses: Swatinem/rust-cache@v2
+      - name: Build all WASM tools
+        run: |
+          for tool in web-search file-read summarise; do
+            echo "Building $tool..."
+            (cd tools/$tool && cargo build --target wasm32-wasi --release)
+            echo "✅ $tool built"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm-tools
+          path: target/wasm32-wasi/release/*.wasm
+          retention-days: 14

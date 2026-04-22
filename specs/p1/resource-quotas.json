@@ -1,0 +1,101 @@
+{
+  "$schema": "https://clawos.dev/schemas/resource-quotas/v1.0",
+  "version": "1.0.0",
+  "frozen": true,
+  "phase": "P1",
+  "description": "ClawOS cgroup v2 resource quota standard values. These are calibration baselines — P4 will fine-tune based on benchmarks, but architecture must be designed to these limits.",
+
+  "profiles": {
+    "agent_process": {
+      "description": "Main IronClaw Agent Loop process",
+      "memory": {
+        "max":        "536870912",
+        "swap_max":   "0",
+        "high":       "419430400",
+        "min":        "67108864",
+        "note":       "512MB hard max, 400MB soft high, 64MB guaranteed min. No swap ever."
+      },
+      "cpu": {
+        "max":        "50000 100000",
+        "weight":     "512",
+        "note":       "50% of one core max. Weight 512 = half of default 1024."
+      },
+      "pids": {
+        "max":        "128",
+        "note":       "128 PIDs covers tokio threads + WASM workers + 2x safety buffer. BLOCKER: verify with C-02 strace."
+      },
+      "io": {
+        "max":        "8:0 rbps=52428800 wbps=52428800 riops=1000 wiops=1000",
+        "note":       "50MB/s read/write. Replace 8:0 with actual disk major:minor at runtime."
+      }
+    },
+
+    "wasm_worker": {
+      "description": "Each isolated WASM tool execution worker",
+      "memory": {
+        "max":        "134217728",
+        "swap_max":   "0",
+        "note":       "128MB per WASM worker. Tools should be lightweight."
+      },
+      "cpu": {
+        "max":        "25000 100000",
+        "weight":     "256",
+        "note":       "25% of one core per tool worker."
+      },
+      "pids": {
+        "max":        "16",
+        "note":       "WASM workers should be single-threaded + minimal helper threads."
+      }
+    },
+
+    "ebpf_monitor": {
+      "description": "eBPF userspace monitoring daemon",
+      "memory": {
+        "max":        "67108864",
+        "note":       "64MB — eBPF maps live in kernel, userspace just reads ring buffer."
+      },
+      "cpu": {
+        "max":        "10000 100000",
+        "note":       "10% max — monitoring should be nearly invisible."
+      },
+      "pids": {
+        "max":        "8"
+      }
+    },
+
+    "clawfs_daemon": {
+      "description": "ClawFS storage daemon (SQLite + HNSW)",
+      "memory": {
+        "max":        "268435456",
+        "note":       "256MB — HNSW index can be large depending on vector count."
+      },
+      "cpu": {
+        "max":        "30000 100000",
+        "note":       "30% for vector search operations."
+      },
+      "pids": {
+        "max":        "32"
+      }
+    }
+  },
+
+  "cgroup_paths": {
+    "root":          "/sys/fs/cgroup/clawos",
+    "agent":         "/sys/fs/cgroup/clawos/agent",
+    "wasm_workers":  "/sys/fs/cgroup/clawos/wasm",
+    "ebpf":          "/sys/fs/cgroup/clawos/ebpf",
+    "clawfs":        "/sys/fs/cgroup/clawos/clawfs"
+  },
+
+  "global_constraints": {
+    "swappiness":    "0",
+    "oom_policy":    "kill_process",
+    "note":          "No swap anywhere in ClawOS. OOM kills the offending process, not the system."
+  },
+
+  "gate": {
+    "validation_cmd": "bash scripts/validate-cgroups.sh",
+    "calibration_task": "P4.2",
+    "sha256": "PENDING"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "summarise",
+  "version": "0.1.0",
+  "description": "Read a file from ClawFS workspace and return an LLM-generated summary. Supports bullet, paragraph, and tldr styles. Inline text also accepted.",
+  "capabilities": ["FsRead", "LlmComplete"],
+  "wasm_path": "tool.wasm",
+  "wit_world": "clawos-tool",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "path":      { "type": "string",  "description": "ClawFS workspace path to file" },
+      "text":      { "type": "string",  "description": "Inline text to summarise (alternative to path)" },
+      "style":     { "type": "string",  "enum": ["bullet", "paragraph", "tldr"], "default": "paragraph" },
+      "max_words": { "type": "integer", "default": 200, "minimum": 10, "maximum": 1000 }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "summary":    { "type": "string" },
+      "word_count": { "type": "integer" },
+      "source":     { "type": "string" }
+    }
+  },
+  "rate_limit": { "requests_per_minute": 20 }
+}

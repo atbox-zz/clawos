@@ -1,0 +1,19 @@
+[package]
+name        = "clawos-channels"
+description = "ClawOS channel abstraction — shared types and traits for Telegram and Web Gateway"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+authors.workspace     = true
+
+[dependencies]
+tokio     = { workspace = true }
+serde     = { workspace = true }
+serde_json = { workspace = true }
+anyhow    = { workspace = true }
+tracing   = { workspace = true }
+uuid      = { workspace = true }
+chrono      = { workspace = true }        # ← 補這行
+#async-trait = "0.1"
+async-trait = { workspace = true }        # ← 改用 workspace

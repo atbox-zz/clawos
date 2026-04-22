@@ -1,0 +1,118 @@
+{
+  "$schema": "https://clawos.dev/schemas/api-surface/v1.0",
+  "version": "1.0.0",
+  "frozen": true,
+  "phase": "P1",
+  "description": "ClawOS public API surface. Any interface listed here is STABLE and must not be removed without a major version bump. Internal interfaces not listed here may change freely in P2/P3.",
+  "http_api": {
+    "base_url": "http://127.0.0.1:8080",
+    "note": "Runs inside network namespace. External access via Telegram/other channels only.",
+    "endpoints": {
+      "GET /health": {
+        "description": "Service health check",
+        "auth": "none",
+        "response": {
+          "status": "ok",
+          "service": "clawos-web-gateway"
+        }
+      },
+      "POST /v1/chat": {
+        "description": "Synchronous chat completion",
+        "auth": "bearer token (session)",
+        "request": {
+          "message": "string",
+          "session_id": "string?"
+        },
+        "response": {
+          "id": "string",
+          "content": "string",
+          "session_id": "string",
+          "done": true
+        }
+      },
+      "GET /v1/chat/stream": {
+        "description": "Server-Sent Events streaming chat",
+        "auth": "bearer token (query param)",
+        "params": [
+          "message",
+          "session_id?"
+        ],
+        "events": [
+          {
+            "content": "string",
+            "done": "bool"
+          }
+        ]
+      },
+      "GET /v1/ws": {
+        "description": "WebSocket bidirectional chat",
+        "protocol": "ws",
+        "messages": {
+          "in": "string (text)",
+          "out": {
+            "content": "string",
+            "done": "bool"
+          }
+        }
+      }
+    }
+  },
+  "ipc_api": {
+    "transport": "Unix domain socket \u2014 /var/run/clawos/ipc/agent.sock",
+    "protocol": "NDJSON (P1.7 IPC protocol)",
+    "stable_message_types": [
+      "task.assign",
+      "task.status",
+      "task.complete",
+      "task.failed",
+      "gate.check",
+      "gate.result",
+      "security.alert",
+      "spec.freeze",
+      "voice.audio"
+    ]
+  },
+  "wasm_tool_api": {
+    "wit_world": "clawos-tool (P1.1)",
+    "entry_point": "run(input-json: string) -> result<string, string>",
+    "host_imports": [
+      "clawos:runtime/clawfs",
+      "clawos:runtime/http-client",
+      "clawos:runtime/secrets",
+      "clawos:runtime/llm",
+      "clawos:runtime/tool-invoke",
+      "clawos:runtime/log"
+    ],
+    "stability": "STABLE \u2014 breaking changes require major WIT version bump"
+  },
+  "clawfs_api": {
+    "operations": [
+      "read_file",
+      "write_file",
+      "list_dir",
+      "delete_file",
+      "vector_search",
+      "text_search"
+    ],
+    "path_prefix": "/var/lib/clawos/workspace/{agent-id}/",
+    "vault_ops": [
+      "freeze",
+      "verify",
+      "list_frozen"
+    ],
+    "stability": "STABLE"
+  },
+  "breaking_change_policy": {
+    "rule": "RULE-004: BREAKING CHANGE must bump major version",
+    "definition": "Any removal or incompatible modification of a listed endpoint, message type, WIT export, or ClawFS operation path is BREAKING.",
+    "process": [
+      "Security Agent veto review",
+      "Core Dev Agent approval",
+      "Version bump in Cargo.toml workspace",
+      "Vault entry for old API version frozen before removal"
+    ]
+  },
+  "gate": {
+    "sha256": "366170f97d941fb51464188be82f41c340e6295bf0d09f217c72adb851914ba5"
+  }
+}

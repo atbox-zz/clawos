@@ -1,0 +1,26 @@
+{
+  "name": "shell-exec",
+  "version": "0.1.0",
+  "description": "Execute a pre-approved shell command inside the ClawOS sandbox. Only whitelisted commands allowed. NEVER executes arbitrary shell strings — uses execvp with explicit argv.",
+  "capabilities": [],
+  "wasm_path": "tool.wasm",
+  "wit_world": "clawos-tool",
+  "security_note": "This tool is HIGH RISK. Disabled by default. Enable only after Security Agent review (RULE-008).",
+  "enabled": false,
+  "input_schema": {
+    "type": "object",
+    "required": ["command"],
+    "properties": {
+      "command":  { "type": "string", "description": "Must match whitelist exactly", "enum": ["cargo test", "cargo clippy", "cargo build", "git status", "git log --oneline -10"] },
+      "cwd":      { "type": "string", "description": "Working directory (must be under /var/lib/clawos/workspace)" }
+    }
+  },
+  "command_whitelist": [
+    "cargo test",
+    "cargo clippy -- -D warnings",
+    "cargo build --release",
+    "git status",
+    "git log --oneline -10"
+  ],
+  "rate_limit": { "requests_per_minute": 5 }
+}

@@ -1,0 +1,32 @@
+[package]
+name        = "clawos-voice"
+description = "ClawOS Voice Layer — Qwen3-TTS integration (optional feature flag)"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+
+[features]
+default  = []
+# Enable with: cargo build --features voice
+voice    = ["dep:hound", "dep:cpal", "dep:rubato"]
+streaming = ["voice"]
+
+[dependencies]
+tokio.workspace      = true
+serde.workspace      = true
+serde_json.workspace = true
+anyhow.workspace     = true
+tracing.workspace    = true
+reqwest.workspace    = true
+bytes.workspace      = true
+uuid.workspace       = true
+chrono.workspace     = true
+
+# Audio I/O (only when feature 'voice' enabled)
+hound    = { version = "3.5",  optional = true }  # WAV encoding/decoding
+cpal     = { version = "0.15", optional = true }  # Cross-platform audio output
+rubato   = { version = "0.15", optional = true }  # Sample rate conversion
+
+[dev-dependencies]
+#tempfile = "3"
+tempfile = { workspace = true }           # ← 從 "3" 改為 workspace

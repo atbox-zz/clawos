@@ -1,0 +1,32 @@
+use aya_ebpf::helpers::bpf_printk;
+use aya_ebpf::{
+    helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns},
+    macros::lsm,
+    programs::LsmContext,
+};
+use crate::{EVENTS, ClawOsEvent};
+
+#[lsm(hook = "file_open")]
+pub fn clawos_lsm_file_open(_ctx: LsmContext) -> i32 {
+    unsafe { bpf_printk!(b"LSM file_open triggered!"); } // 核心偵錯點
+    // 什麼都不讀取，直接發送一個固定事件
+    let mut details = [0u8; 176];
+    details[0..4].copy_from_slice(b"TEST");
+
+    if let Some(mut entry) = EVENTS.reserve::<ClawOsEvent>(0) {
+        let e = unsafe { entry.as_mut_ptr().as_mut().unwrap() };
+        e.kind = 999; // 測試用 ID
+        e.severity = 1;
+        e.pid = (bpf_get_current_pid_tgid() >> 32) as u32;
+        e.timestamp_ns = unsafe { bpf_ktime_get_ns() };
+        e.details = details;
+        entry.submit(0);
+    }
+    0 // 0 代表 ALLOW，不影響系統運作
+}
+
+#[lsm(hook = "socket_connect")]
+pub fn clawos_lsm_socket_connect(_ctx: LsmContext) -> i32 {
+    0
+}
+

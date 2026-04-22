@@ -1,0 +1,65 @@
+use aya_ebpf::bpf_printk;
+use aya_ebpf::{
+    helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns, bpf_probe_read_kernel},
+    macros::lsm,
+    programs::LsmContext,
+};
+use core::ffi::c_int;
+use crate::{EVENTS, ClawOsEvent};
+
+const EPERM: c_int = -1;
+const ALLOW: c_int = 0;
+
+#[lsm(hook = "file_open")]
+pub fn clawos_lsm_file_open(ctx: LsmContext) -> i32 {
+    let file_ptr: usize = unsafe { ctx.arg(0) };
+    if file_ptr == 0 { return ALLOW; }
+
+    // 透過 dentry 讀取檔名 (較穩定，避開 bpf_d_path 的 Verifier 限制)
+    let dentry_ptr: u64 = unsafe { bpf_probe_read_kernel((file_ptr + 16) as *const u64).unwrap_or(0) };
+    if dentry_ptr == 0 { return ALLOW; }
+
+    let name_ptr: u64 = unsafe { bpf_probe_read_kernel((dentry_ptr as usize + 48) as *const u64).unwrap_or(0) };
+    if name_ptr == 0 { return ALLOW; }
+
+    let mut name = [0u8; 32];
+    unsafe { 
+        let _ = bpf_probe_read_kernel(name_ptr as *const [u8; 32]).map(|data| name = data);
+    };
+
+    // 範例：阻擋包含 "shadow" 的檔案
+    if name.iter().any(|&b| b == b's') && name.starts_with(b"shadow") {
+      //emit_event(2, 4); // Kind: SuspiciousFileOpen, Critical
+        //暴力測試：只要有人開檔就發送事件到 RingBuffer     
+        emit_event(2, 1); // Kind: SuspiciousFileOpen, Severity: Low
+        //暫時不要 return EPERM，確認事件能傳回去再說
+        //return EPERM;
+    }
+    ALLOW
+}
+
+#[lsm(hook = "socket_connect")]
+pub fn clawos_lsm_socket_connect(_ctx: LsmContext) -> i32 {
+    ALLOW
+}
+
+fn emit_event(kind: u32, severity: u8) {
+    // 加上這行 debug 訊息
+    unsafe { 
+        bpf_printk!(b"Attempting to reserve ringbuf space"); 
+    }
+
+    if let Some(mut entry) = EVENTS.reserve::<ClawOsEvent>(0) {
+        let e = unsafe { entry.as_mut_ptr().as_mut().unwrap() };
+        e.kind = kind;
+        e.severity = severity;
+        e.pid = (bpf_get_current_pid_tgid() >> 32) as u32;
+        e.timestamp_ns = unsafe { bpf_ktime_get_ns() };
+        entry.submit(0);
+        unsafe { bpf_printk!(b"Event submitted successfully"); }
+    } else {
+        unsafe { bpf_printk!(b"Ringbuf reserve FAILED - buffer full?"); }
+    }
+    
+}
+

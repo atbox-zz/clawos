@@ -1,0 +1,120 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/clawfs",
+    "crates/clawos-agent",
+    "crates/clawos-ebpf",
+    "crates/clawos-ebpf-userspace",
+    "crates/clawos-seccomp",
+    "crates/clawos-ns",
+    "crates/clawos-llm",
+    "crates/clawos-voice",
+    "crates/clawos-tools",
+    "crates/clawos-channels",
+    # WASM tools — compiled separately to wasm32-wasip1
+    "tools/web-search",
+    "tools/file-read",
+    "tools/summarise",
+    "channels/web-gateway",
+    "channels/telegram",
+]
+
+[workspace.package]
+version       = "0.1.0"
+edition       = "2021"
+rust-version  = "1.85"
+license       = "Apache-2.0 OR MIT"
+authors       = ["ClawOS Project"]
+repository    = "https://github.com/atbox-zz/clawos"
+
+[workspace.dependencies]
+# ── Async runtime ───────────────────────────────────────────
+tokio         = { version = "1",    features = ["full"] }
+tokio-util    = { version = "0.7" }
+
+# ── Serialization ───────────────────────────────────────────
+serde         = { version = "1",    features = ["derive"] }
+serde_json    = { version = "1" }
+
+# ── Error handling ──────────────────────────────────────────
+anyhow        = { version = "1" }
+thiserror     = { version = "1" }
+
+# ── Logging ─────────────────────────────────────────────────
+tracing       = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# ── eBPF ────────────────────────────────────────────────────
+aya           = { version = "0.13" }
+aya-log       = { version = "0.2" }
+aya-ebpf      = { version = "0.1" }
+aya-log-ebpf  = { version = "0.1" }
+
+# ── seccomp ─────────────────────────────────────────────────
+libseccomp    = { version = "0.3" }
+
+# ── WASM runtime ────────────────────────────────────────────
+wasmtime      = { version = "27", features = ["async", "cranelift"] }
+#wasmtime-wasi = { version = "27", features = ["sync"] }
+wasmtime-wasi = { version = "27"                      }
+
+# ── Unix syscalls ────────────────────────────────────────────
+nix = { version = "0.27", features = ["mount", "user", "sched", "signal", "process", "fs", "socket"] }
+libc          = { version = "0.2" }
+
+# ── Crypto ──────────────────────────────────────────────────
+ring          = { version = "0.17" }
+aes-gcm       = { version = "0.10" }
+
+# ── Database ────────────────────────────────────────────────
+rusqlite      = { version = "0.31", features = ["bundled", "vtab", "column_decltype"] }
+
+# ── HTTP ────────────────────────────────────────────────────
+reqwest       = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+axum          = { version = "0.7" }
+prometheus-client = { version = "0.22" }
+async-trait       = { version = "0.1" }
+
+# ── Vector index ────────────────────────────────────────────
+instant-distance = { version = "0.6" }  # P4: HNSW ANN index for ClawFS
+
+# ── Utilities ───────────────────────────────────────────────
+uuid          = { version = "1",    features = ["v4"] }
+chrono        = { version = "0.4",  features = ["serde"] }
+bytes         = { version = "1" }
+once_cell     = { version = "1" }
+parking_lot   = { version = "0.12" }
+tempfile      = { version = "3" }
+
+[profile.release]
+opt-level     = 3
+codegen-units = 1
+panic         = "abort"     # smaller binary, no unwinding in prod
+strip         = "symbols"
+
+[profile.dev]
+opt-level     = 0
+debug         = true
+
+# ── eBPF target config ──────────────────────────────────────
+# See .cargo/config.toml for cross-compilation setup
+
+# eBPF crate 需要特殊設定（不能用 LTO，至少 O2）
+[profile.release.package.clawos-ebpf]
+opt-level = 2
+ 
+[profile.dev.package.clawos-ebpf]
+opt-level = 2
+
+# ── WASM tool size optimisation ─────────────────────────────
+# These packages are compiled to wasm32-wasip1 and need size-first settings.
+# Override the workspace release profile for them.
+[profile.release.package.web-search]
+opt-level = "z"
+
+[profile.release.package.file-read]
+opt-level = "z"
+
+[profile.release.package.summarise]
+opt-level = "z"
+

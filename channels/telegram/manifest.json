@@ -1,0 +1,26 @@
+{
+  "name": "telegram",
+  "version": "0.1.0",
+  "description": "Telegram Bot channel. Receives webhook updates from Telegram, forwards to agent loop, sends replies via sendMessage API. Token injected by host — never visible to WASM.",
+  "type": "channel",
+  "wit_world": "clawos-channel",
+  "config_schema": {
+    "type": "object",
+    "required": ["bot_token_secret"],
+    "properties": {
+      "bot_token_secret":  { "type": "string", "description": "Kernel keyring name for bot token" },
+      "allowed_user_ids":  { "type": "array",  "items": { "type": "integer" }, "description": "Telegram user ID allowlist. Empty = allow all." },
+      "webhook_path":      { "type": "string", "default": "/telegram/webhook" },
+      "parse_mode":        { "type": "string", "default": "MarkdownV2" }
+    }
+  },
+  "endpoints": {
+    "inbound":  "POST /telegram/webhook",
+    "outbound": "https://api.telegram.org/bot{{BOT_TOKEN}}/sendMessage"
+  },
+  "security": {
+    "token_injection": "Host injects token via clawos_secrets_get() — never passed as string to WASM",
+    "allowlist": "allowed_user_ids checked before processing any message"
+  },
+  "rate_limit": { "messages_per_second": 30 }
+}

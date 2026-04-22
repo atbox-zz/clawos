@@ -1,0 +1,111 @@
+# /etc/apparmor.d/clawos-agent
+# ClawOS Agent AppArmor Profile — F-01
+# Test with: aa-complain /etc/apparmor.d/clawos-agent
+# Enforce with: aa-enforce /etc/apparmor.d/clawos-agent
+# Reload: apparmor_parser -r /etc/apparmor.d/clawos-agent
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile clawos-agent /usr/local/bin/clawos-agent {
+  include <abstractions/base>
+
+  # ── Binary ─────────────────────────────────────────────────
+  /usr/local/bin/clawos-agent   r,
+
+  # ── Config (read-only) ──────────────────────────────────────
+  /etc/clawos/                  r,
+  /etc/clawos/*.toml            r,
+  /etc/clawos/.env              r,
+
+  # ── ClawFS data (read-write) ────────────────────────────────
+  /var/lib/clawos/              r,
+  /var/lib/clawos/clawfs.db     rw,
+  /var/lib/clawos/clawfs.db-wal rw,
+  /var/lib/clawos/clawfs.db-shm rw,
+  /var/lib/clawos/workspace/    rw,
+  /var/lib/clawos/workspace/**  rw,
+  /var/lib/clawos/tools/        r,
+  /var/lib/clawos/tools/*.wasm  r,
+  /var/lib/clawos/logs/         rw,
+  /var/lib/clawos/logs/**       rw,
+
+  # ── Secrets (read-only — never write) ───────────────────────
+  /var/lib/clawos/secrets/      r,
+  /var/lib/clawos/secrets/*.pem r,
+  /var/lib/clawos/secrets/*.crt r,
+  # NOTE: secret values are accessed via kernel keyring, not files
+
+  # ── IPC sockets ─────────────────────────────────────────────
+  /var/run/clawos/              rw,
+  /var/run/clawos/*.sock        rw,
+
+  # ── Temp ────────────────────────────────────────────────────
+  /tmp/clawos-*/                rw,
+  /tmp/clawos-**                rw,
+
+  # ── Proc (minimal) ──────────────────────────────────────────
+  /proc/self/                   r,
+  /proc/self/stat               r,
+  /proc/self/status             r,
+  /proc/self/maps               r,
+  /proc/self/fd/                r,
+  /proc/self/task/              r,
+  /proc/self/task/*             r,
+  # cgroup self-join
+  /sys/fs/cgroup/clawos/agent/cgroup.procs w,
+
+  # ── Kernel keyring (for secrets) ────────────────────────────
+  capability sys_admin,         # needed ONLY for keyctl — drop if using libsecret
+
+  # ── eBPF (required for loading eBPF programs) ───────────────
+  capability bpf,
+  capability perfmon,
+
+  # ── Networking (TCP only — port enforced at XDP layer) ───────
+  network tcp,
+  deny network udp,
+  deny network raw,
+  deny network packet,
+
+  # ── WASM JIT (wasmtime needs mmap+mprotect) ─────────────────
+  # Allowed by seccomp whitelist — AppArmor does not separately restrict mmap
+
+  # ── Explicit denies (belt-and-suspenders) ───────────────────
+  deny /etc/passwd              r,
+  deny /etc/shadow              rw,
+  deny /etc/sudoers             rw,
+  deny /root/**                 rw,
+  deny /home/**                 rw,
+  deny /proc/*/mem              rw,
+  deny /proc/sysrq-trigger      w,
+  deny /sys/kernel/**           w,
+
+  # ── No ptrace ───────────────────────────────────────────────
+  deny ptrace,
+
+  # ── No execution of external binaries ───────────────────────
+  # (WASM tools run inside wasmtime, not as OS processes)
+  deny /bin/**                  x,
+  deny /usr/bin/**              x,
+  deny /sbin/**                 x,
+  deny /usr/sbin/**             x,
+}
+
+# ── WASM Worker sub-profile ──────────────────────────────────
+# Each WASM tool worker gets a tighter profile
+profile clawos-wasm-worker /usr/local/bin/clawos-agent//clawos-wasm-worker {
+  include <abstractions/base>
+
+  # Even tighter: no network, no secrets, no proc
+  /var/lib/clawos/workspace/    r,
+  /var/lib/clawos/workspace/**  rw,
+  /tmp/clawos-wasm-*/           rw,
+
+  deny network,
+  deny /etc/**                  rw,
+  deny /proc/**                 rw,
+  deny /sys/**                  rw,
+  deny capability,
+}

@@ -1,0 +1,23 @@
+[package]
+name    = "shell-exec"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name       = "shell_exec"
+path       = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[features]
+default = []
+# Feature gate: must be explicitly enabled in config
+enabled = []
+
+[dependencies]
+serde      = { version = "1", features = ["derive"], default-features = false }
+serde_json = { version = "1", default-features = false, features = ["alloc"] }
+
+[profile.release]
+opt-level = "z"
+lto       = true
+strip     = true
