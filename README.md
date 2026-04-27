@@ -72,8 +72,8 @@ cargo lint
 |-------| ---------------------------------------|--------|
 | P1    | Freeze 8 core specs                    | ✅ Complete |
 | P2    | Engine skeleton (Rust)                 | ✅ Complete |
-| P3    | Fill data (tools, channels, migration) | 🔄 In progress |
-| P4    | Calibrate (perf, security, ISO)        | ⏳ Pending |
+| P3    | Fill data (tools, channels, migration) | ✅ Complete |
+| P4    | Calibrate (perf, security, ISO)        | ✅ Complete |
 
 ## P1 Frozen Specs
 
