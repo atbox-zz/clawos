@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClawOS — AI 任務計劃規格書 v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #2c468d;
+    --bg2:      #0f1f47;
+    --bg3:      #163840;
+    --panel:    #0f1930;
+    --border:   #1a2d50;
+    --green:    #00e87a;
+    --green2:   #00b85e;
+    --cyan:     #00c8ff;
+    --blue:     #2979ff;
+    --red:      #ff3355;
+    --orange:   #ff8c00;
+    --yellow:   #ffd600;
+    --purple:   #9b59ff;
+    --text:     #c8d8f0;
+    --text2:    #7a90b0;
+    --text3:    #3d5070;
+    --white:    #ffffff;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Syne', sans-serif;
+    --body:     'Inter', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ─── SCANLINE OVERLAY ─────────────────────── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ─── NOISE TEXTURE ─────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── HERO ─────────────────────────────────── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 80%);
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 800px; height: 500px;
+    background: radial-gradient(ellipse, rgba(0,200,255,0.08) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--green);
+    background: rgba(0,232,122,0.08);
+    border: 1px solid rgba(0,232,122,0.25);
+    padding: 0.4rem 1.2rem;
+    border-radius: 2px;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+    animation: fadeInDown 0.6s ease both;
+  }
+
+  .hero-badge::before {
+    content: '▶ ';
+    color: var(--green);
+  }
+
+  .hero-title {
+    font-family: var(--sans);
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+    animation: fadeInUp 0.7s ease 0.1s both;
+  }
+
+  .hero-title .claw { color: var(--cyan); }
+  .hero-title .os { color: var(--white); }
+
+  .hero-sub {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text2);
+    margin-top: 1rem;
+    position: relative;
+    z-index: 1;
+    animation: fadeInUp 0.7s ease 0.2s both;
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    color: var(--text2);
+    max-width: 620px;
+    margin: 2rem auto 0;
+    position: relative;
+    z-index: 1;
+    animation: fadeInUp 0.7s ease 0.3s both;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    animation: fadeInUp 0.7s ease 0.4s both;
+  }
+
+  .hero-stat {
+    text-align: center;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    padding: 1.2rem 2rem;
+    border-radius: 4px;
+    min-width: 130px;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .hero-stat:hover {
+    border-color: var(--cyan);
+    transform: translateY(-4px);
+  }
+
+  .hero-stat-num {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--cyan);
+    display: block;
+  }
+
+  .hero-stat-label {
+    font-size: 12px;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ─── SCROLL INDICATOR ──────────────────────── */
+  .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    animation: fadeInUp 1s ease 0.8s both;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(var(--cyan), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(1); }
+    50% { opacity: 1; transform: scaleY(1.2); }
+  }
+
+  /* ─── NAV ───────────────────────────────────── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(5,8,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cyan);
+    padding: 1rem 1.5rem 1rem 0;
+    border-right: 1px solid var(--border);
+    margin-right: 1rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  nav a {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    text-decoration: none;
+    padding: 1rem 1rem;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+
+  nav a:hover {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+  }
+
+  /* ─── SECTION ───────────────────────────────── */
+  section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 5rem 2rem;
+  }
+
+  .section-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-tag::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1px;
+    background: var(--green);
+  }
+
+  h2.section-title {
+    font-family: var(--sans);
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--white);
+    margin-bottom: 1rem;
+  }
+
+  .section-desc {
+    color: var(--text2);
+    max-width: 640px;
+    margin-bottom: 3rem;
+    font-size: 15px;
+  }
+
+  h3.sub-title {
+    font-family: var(--sans);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--cyan);
+    margin: 2.5rem 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  h3.sub-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(var(--border), transparent);
+  }
+
+  /* ─── DIVIDER ───────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border) 30%, var(--border) 70%, transparent);
+    margin: 1rem 0;
+  }
+
+  /* ─── ARCHITECTURE BOX ─────────────────────── */
+  .arch-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+    border-radius: 4px;
+    padding: 2rem;
+    margin: 2rem 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--text2);
+    overflow-x: auto;
+  }
+
+  .arch-layer {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.2rem 0;
+    transition: color 0.2s;
+  }
+
+  .arch-layer:hover { color: var(--text); }
+
+  .arch-num {
+    color: var(--text3);
+    min-width: 60px;
+    flex-shrink: 0;
+  }
+
+  .arch-name {
+    color: var(--cyan);
+    font-weight: 600;
+    min-width: 200px;
+  }
+
+  .arch-desc { color: var(--text2); }
+
+  /* ─── DOMAIN CARDS ──────────────────────────── */
+  .domain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .domain-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  }
+
+  .domain-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+
+  .domain-header {
+    padding: 1rem 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .domain-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .domain-name {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+
+  .domain-tasks {
+    padding: 1rem 1.4rem;
+    list-style: none;
+  }
+
+  .domain-tasks li {
+    font-size: 13px;
+    color: var(--text2);
+    padding: 0.35rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    transition: color 0.2s;
+  }
+
+  .domain-tasks li:last-child { border-bottom: none; }
+  .domain-tasks li:hover { color: var(--text); }
+
+  .task-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: inherit;
+    opacity: 0.5;
+    min-width: 40px;
+    flex-shrink: 0;
+  }
+
+  .domain-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    padding: 0.8rem 1.4rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ─── PHASES ─────────────────────────────────── */
+  .phases {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .phase-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.6rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .phase-card.p1::before { background: var(--cyan); }
+  .phase-card.p2::before { background: var(--blue); }
+  .phase-card.p3::before { background: var(--green); }
+  .phase-card.p4::before { background: var(--purple); }
+
+  .phase-card:hover { border-color: var(--cyan); }
+
+  .phase-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .phase-title {
+    font-family: var(--sans);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.6rem;
+  }
+
+  .phase-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 1.2rem;
+    line-height: 1.6;
+  }
+
+  .phase-items {
+    list-style: none;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  .phase-items li {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    padding: 0.25rem 0;
+    padding-left: 1rem;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  .phase-items li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--text3);
+  }
+
+  .gate {
+    margin-top: 1rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.6rem 0.8rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .gate::before { content: '🔒'; font-size: 12px; }
+
+  /* ─── AGENTS ─────────────────────────────────── */
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.2rem;
+    margin: 2rem 0;
+  }
+
+  .agent-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.4rem;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .agent-card:hover {
+    border-color: var(--cyan);
+    transform: translateY(-3px);
+  }
+
+  .agent-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .agent-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .agent-name {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+
+  .agent-desc {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 0.8rem;
+    line-height: 1.6;
+  }
+
+  .agent-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.8;
+    border-top: 1px solid var(--border);
+    padding-top: 0.8rem;
+  }
+
+  .agent-meta span { color: var(--cyan); }
+
+  /* ─── CONFLICT TABLE ─────────────────────────── */
+  .conflict-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 13px;
+  }
+
+  .conflict-table th {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text2);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 0.7rem 1rem;
+    text-align: left;
+    font-weight: 600;
+  }
+
+  .conflict-table td {
+    border: 1px solid var(--border);
+    padding: 0.7rem 1rem;
+    vertical-align: top;
+    color: var(--text2);
+    background: var(--bg2);
+    line-height: 1.6;
+  }
+
+  .conflict-table tr:nth-child(even) td {
+    background: rgba(255,255,255,0.015);
+  }
+
+  .conflict-table tr:hover td {
+    background: rgba(0,200,255,0.04);
+  }
+
+  .risk-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .risk-high { background: rgba(255,51,85,0.15); color: var(--red); border: 1px solid rgba(255,51,85,0.3); }
+  .risk-med  { background: rgba(255,140,0,0.15);  color: var(--orange); border: 1px solid rgba(255,140,0,0.3); }
+  .risk-low  { background: rgba(0,232,122,0.1);   color: var(--green); border: 1px solid rgba(0,232,122,0.2); }
+
+  /* ─── GATE CHECKS ────────────────────────────── */
+  .gate-section {
+    margin: 2rem 0;
+  }
+
+  .gate-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .gate-title::before {
+    content: '';
+    width: 8px; height: 8px;
+    background: var(--cyan);
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  .check-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .check-item {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 0.6rem 1rem;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    line-height: 1.5;
+  }
+
+  .check-ok {
+    background: rgba(0,232,122,0.05);
+    border-color: rgba(0,232,122,0.15);
+    color: var(--green2);
+  }
+
+  .check-warn {
+    background: rgba(255,140,0,0.05);
+    border-color: rgba(255,140,0,0.15);
+    color: var(--orange);
+  }
+
+  /* ─── GLOBAL RULES ───────────────────────────── */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .rule-card {
+    background: rgba(255,51,85,0.04);
+    border: 1px solid rgba(255,51,85,0.15);
+    border-radius: 4px;
+    padding: 1rem 1.2rem;
+    transition: border-color 0.3s;
+  }
+
+  .rule-card:hover { border-color: rgba(255,51,85,0.4); }
+
+  .rule-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  .rule-text {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  /* ─── TIMELINE ───────────────────────────────── */
+  .timeline {
+    position: relative;
+    margin: 2rem 0;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 80px;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(var(--border), var(--border) 90%, transparent);
+  }
+
+  .timeline-item {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 2rem;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+
+  .timeline-week {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-align: right;
+    padding-top: 0.2rem;
+    line-height: 1.4;
+  }
+
+  .timeline-content {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.8rem 1.2rem;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .timeline-content::before {
+    content: '';
+    position: absolute;
+    left: -2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px; height: 8px;
+    background: var(--bg3);
+    border: 2px solid var(--border);
+    border-radius: 50%;
+  }
+
+  .timeline-content:hover {
+    border-color: var(--cyan);
+  }
+
+  .timeline-content:hover::before {
+    border-color: var(--cyan);
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  .tl-phase {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+  }
+
+  .tl-milestone {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .tl-output {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 0.2rem;
+  }
+
+  /* ─── TECH TABLE ─────────────────────────────── */
+  .tech-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+  }
+
+  .tech-table th {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    padding: 0.6rem 1rem;
+    text-align: left;
+    background: var(--bg3);
+  }
+
+  .tech-table td {
+    border: 1px solid var(--border);
+    padding: 0.65rem 1rem;
+    font-size: 13px;
+    color: var(--text2);
+    background: var(--bg2);
+  }
+
+  .tech-table tr:nth-child(even) td {
+    background: rgba(255,255,255,0.015);
+  }
+
+  .tech-table td:first-child {
+    font-family: var(--mono);
+    color: var(--cyan);
+    font-size: 12px;
+  }
+
+  .tech-table td:nth-child(2) {
+    font-family: var(--mono);
+    color: var(--green);
+    font-size: 12px;
+  }
+
+  /* ─── FOOTER ─────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    line-height: 2;
+  }
+
+  .footer-meta a { color: var(--text2); text-decoration: none; }
+  .footer-meta a:hover { color: var(--cyan); }
+
+  /* ─── ANIMATIONS ─────────────────────────────── */
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ─── SCROLLBAR ──────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  /* ─── RESPONSIVE ─────────────────────────────── */
+  @media (max-width: 640px) {
+    .phases { grid-template-columns: 1fr; }
+    .agents-grid { grid-template-columns: 1fr; }
+    .domain-grid { grid-template-columns: 1fr; }
+    .conflict-table { font-size: 12px; }
+    .timeline::before { display: none; }
+    .timeline-item { grid-template-columns: 50px 1fr; gap: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="hero" id="top">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+
+  <div class="hero-badge">AI 任務計劃規格書 v1.0 — 2026-02-23</div>
+
+  <h1 class="hero-title">
+    <span class="claw">Claw</span><span class="os">OS</span>
+  </h1>
+
+  <div class="hero-sub">
+    based on nearai/ironclaw × Linux Kernel 6.6 LTS
+  </div>
+
+  <p class="hero-desc">
+    AI-Native Operating System 底層重構計劃。將 IronClaw Agent 引擎直接嵌入 Linux Kernel，
+    透過 eBPF、seccomp、Namespace、cgroup v2 打造 7 層 defense-in-depth 架構。
+  </p>
+
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <span class="hero-stat-num">47</span>
+      <span class="hero-stat-label">主要任務</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">8</span>
+      <span class="hero-stat-label">AI Agents</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">24</span>
+      <span class="hero-stat-label">週工期</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">7</span>
+      <span class="hero-stat-label">安全層</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">4</span>
+      <span class="hero-stat-label">執行階段</span>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    SCROLL
+    <div class="scroll-line"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav>
+  <div class="nav-logo">⬡ ClawOS</div>
+  <a href="#overview">概述</a>
+  <a href="#tasks">任務清單</a>
+  <a href="#phases">執行流程</a>
+  <a href="#agents">Agent 分工</a>
+  <a href="#conflicts">衝突分析</a>
+  <a href="#gates">驗證閘門</a>
+  <a href="#rules">規格書</a>
+  <a href="#timeline">時程</a>
+  <a href="#tech">技術棧</a>
+</nav>
+
+<!-- ═══════════════ OVERVIEW ═══════════════ -->
+<section id="overview">
+  <div class="section-tag">Section 01</div>
+  <h2 class="section-title">專案概述</h2>
+  <p class="section-desc">ClawOS 以 IronClaw（nearai/ironclaw）為引擎核心，從 Linux Kernel 底層重新打造 AI-Native OS。</p>
+
+  <div class="divider"></div>
+
+  <h3 class="sub-title">IronClaw 原始架構（已確認）</h3>
+  <div class="arch-box fade-in">
+    <div class="arch-layer"><span class="arch-num">src/</span><span class="arch-name">Agent Loop + Router</span><span class="arch-desc">主訊息處理、意圖分類、並行 Job 協調</span></div>
+    <div class="arch-layer"><span class="arch-num">src/</span><span class="arch-name">Scheduler + Worker</span><span class="arch-desc">優先序任務排程、LLM 推理 + 工具呼叫執行</span></div>
+    <div class="arch-layer"><span class="arch-num">src/</span><span class="arch-name">Orchestrator</span><span class="arch-desc">容器生命週期、LLM 代理、per-job 鑑權</span></div>
+    <div class="arch-layer"><span class="arch-num">channels-src/</span><span class="arch-name">WASM Channels</span><span class="arch-desc">Telegram / Slack / Web Gateway (SSE + WebSocket)</span></div>
+    <div class="arch-layer"><span class="arch-num">tools-src/</span><span class="arch-name">Tool Registry</span><span class="arch-desc">動態 WASM 工具建置，Capability-based 權限系統</span></div>
+    <div class="arch-layer"><span class="arch-num">wit/</span><span class="arch-name">WIT 介面定義</span><span class="arch-desc">WASM Component Model ABI 規格</span></div>
+    <div class="arch-layer"><span class="arch-num">migrations/</span><span class="arch-name">PostgreSQL Schema</span><span class="arch-desc">pgvector + FTS5 混合搜尋後端</span></div>
+    <div class="arch-layer"><span class="arch-num">docker/</span><span class="arch-name">Docker Sandbox</span><span class="arch-desc">Orchestrator / Worker 隔離執行模式（ClawOS 將替換）</span></div>
+  </div>
+
+  <h3 class="sub-title">ClawOS 目標架構（7 層）</h3>
+  <div class="arch-box fade-in" style="border-left-color: var(--green);">
+    <div class="arch-layer"><span class="arch-num" style="color:var(--green)">Layer 7</span><span class="arch-name" style="color:var(--green)">ClawOS Shell</span><span class="arch-desc">AI-native CLI，替代 bash/zsh，Agent 直接操控 OS</span></div>
+    <div class="arch-layer"><span class="arch-num" style="color:var(--cyan)">Layer 6</span><span class="arch-name" style="color:var(--cyan)">Agent Runtime</span><span class="arch-desc">IronClaw Agent Loop 嵌入 OS 服務層（systemd-like）</span></div>
+    <div class="arch-layer"><span class="arch-num" style="color:var(--blue)">Layer 5</span><span class="arch-name" style="color:var(--blue)">WASM Kernel Bridge</span><span class="arch-desc">WASM sandbox 改為 userspace daemon + kernel ABI 橋接</span></div>
+    <div class="arch-layer"><span class="arch-num" style="color:var(--purple)">Layer 4</span><span class="arch-name" style="color:var(--purple)">eBPF AI Monitor</span><span class="arch-desc">kernel-level 監控：syscall / file / network / 異常偵測</span></div>
+    <div class="arch-layer"><span class="arch-num" style="color:var(--orange)">Layer 3</span><span class="arch-name" style="color:var(--orange)">ClawFS</span><span class="arch-desc">AI-aware 檔案系統：向量索引 + AES-256-GCM 加密</span></div>
+    <div class="arch-layer"><span class="arch-num" style="color:var(--red)">Layer 2</span><span class="arch-name" style="color:var(--red)">Hardened Kernel</span><span class="arch-desc">Linux 6.6 LTS + seccomp-BPF + LSM + KASLR + cgroup v2</span></div>
+    <div class="arch-layer"><span class="arch-num" style="color:var(--text3)">Layer 1</span><span class="arch-name">Hardware Trust</span><span class="arch-desc">TPM 2.0 + Secure Boot + eBPF JIT + MODULE_SIG_FORCE</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════ TASKS ═══════════════ -->
+<section id="tasks">
+  <div class="section-tag">Section 02</div>
+  <h2 class="section-title">任務清單 — 47 Tasks / 7 領域</h2>
+  <p class="section-desc">所有任務按領域分類，每張卡片展示該領域的完整任務列表與負責 Agent。</p>
+
+  <div class="domain-grid">
+
+    <div class="domain-card fade-in" style="border-top: 3px solid var(--cyan);">
+      <div class="domain-header">
+        <span class="domain-id" style="color:var(--cyan); border-color:rgba(0,200,255,0.2)">A</span>
+        <span class="domain-name">Kernel 基礎層重構</span>
+      </div>
+      <ul class="domain-tasks">
+        <li><span class="task-id">A-01</span>Linux 6.6 LTS 客製化編譯配置</li>
+        <li><span class="task-id">A-02</span>KASLR / SMEP / SMAP / Stack 保護啟用</li>
+        <li><span class="task-id">A-03</span>BPF_LSM + DEBUG_INFO_BTF 編譯整合</li>
+        <li><span class="task-id">A-04</span>最小化 rootfs（musl libc + 靜態二進位）</li>
+        <li><span class="task-id">A-05</span>Kernel Module 簽章系統（MODULE_SIG_FORCE）</li>
+        <li><span class="task-id">A-06</span>Lockdown Mode 整合（CONFIDENTIALITY）</li>
+      </ul>
+      <div class="domain-count">6 tasks ·  Kernel Engineer Agent</div>
+    </div>
+
+    <div class="domain-card fade-in" style="border-top: 3px solid #3a7bd5;">
+      <div class="domain-header">
+        <span class="domain-id" style="color:#3a7bd5; border-color:rgba(58,123,213,0.2)">B</span>
+        <span class="domain-name">eBPF 監控與安全層</span>
+      </div>
+      <ul class="domain-tasks">
+        <li><span class="task-id">B-01</span>Aya-rs eBPF 基礎架構建立</li>
+        <li><span class="task-id">B-02</span>Tracepoint hooks：syscall 監控</li>
+        <li><span class="task-id">B-03</span>LSM hooks：file_open / socket_connect</li>
+        <li><span class="task-id">B-04</span>XDP 網路過濾（TCP:5432 only）</li>
+        <li><span class="task-id">B-05</span>Ring Buffer 異常行為偵測引擎</li>
+        <li><span class="task-id">B-06</span>Prometheus metrics 整合</li>
+        <li><span class="task-id">B-07</span>CO-RE 移植（跨 kernel 版本）</li>
+      </ul>
+      <div class="domain-count">7 tasks · eBPF Agent</div>
+    </div>
+
+    <div class="domain-card fade-in" style="border-top: 3px solid var(--green);">
+      <div class="domain-header">
+        <span class="domain-id" style="color:var(--green); border-color:rgba(0,232,122,0.2)">C</span>
+        <span class="domain-name">seccomp / NS / cgroup</span>
+      </div>
+      <ul class="domain-tasks">
+        <li><span class="task-id">C-01</span>seccomp-BPF Whitelist 設計</li>
+        <li><span class="task-id">C-02</span>strace 輔助分析實際 syscall 需求</li>
+        <li><span class="task-id">C-03</span>User Namespace + UID mapping</li>
+        <li><span class="task-id">C-04</span>PID / Mount / Net / UTS namespace</li>
+        <li><span class="task-id">C-05</span>pivot_root 最小 rootfs 切換</li>
+        <li><span class="task-id">C-06</span>cgroup v2 資源硬上限設定</li>
+        <li><span class="task-id">C-07</span>Network namespace + veth + iptables</li>
+      </ul>
+      <div class="domain-count">7 tasks · Security Agent</div>
+    </div>
+
+    <div class="domain-card fade-in" style="border-top: 3px solid var(--purple);">
+      <div class="domain-header">
+        <span class="domain-id" style="color:var(--purple); border-color:rgba(155,89,255,0.2)">D</span>
+        <span class="domain-name">IronClaw 核心引擎移植</span>
+      </div>
+      <ul class="domain-tasks">
+        <li><span class="task-id">D-01</span>Agent Loop → ClawOS Kernel Service</li>
+        <li><span class="task-id">D-02</span>Router / Scheduler → OS-level IPC</li>
+        <li><span class="task-id">D-03</span>Worker Pool → cgroup isolated tasks</li>
+        <li><span class="task-id">D-04</span>WASM Runtime kernel bridge</li>
+        <li><span class="task-id">D-05</span>WIT → ClawOS syscall bridge</li>
+        <li><span class="task-id">D-06</span>Tool Registry → ClawFS 整合</li>
+        <li><span class="task-id">D-07</span>Routines → systemd timer / eBPF event</li>
+        <li><span class="task-id">D-08</span>Heartbeat → kernel watchdog</li>
+      </ul>
+      <div class="domain-count">8 tasks · Core Dev Agent</div>
+    </div>
+
+    <div class="domain-card fade-in" style="border-top: 3px solid var(--orange);">
+      <div class="domain-header">
+        <span class="domain-id" style="color:var(--orange); border-color:rgba(255,140,0,0.2)">E</span>
+        <span class="domain-name">ClawFS 檔案系統</span>
+      </div>
+      <ul class="domain-tasks">
+        <li><span class="task-id">E-01</span>ClawFS 設計規格（向量索引 + 加密）</li>
+        <li><span class="task-id">E-02</span>PostgreSQL → SQLite + HNSW 替換</li>
+        <li><span class="task-id">E-03</span>Hybrid Search（FTS5 + Vector）</li>
+        <li><span class="task-id">E-04</span>Workspace Filesystem → POSIX API</li>
+        <li><span class="task-id">E-05</span>Secrets Vault（kernel keyring）</li>
+        <li><span class="task-id">E-06</span>Identity Files persistent memory</li>
+      </ul>
+      <div class="domain-count">6 tasks · FS Engineer Agent</div>
+    </div>
+
+    <div class="domain-card fade-in" style="border-top: 3px solid var(--red);">
+      <div class="domain-header">
+        <span class="domain-id" style="color:var(--red); border-color:rgba(255,51,85,0.2)">F</span>
+        <span class="domain-name">AppArmor / LSM 強制存取控制</span>
+      </div>
+      <ul class="domain-tasks">
+        <li><span class="task-id">F-01</span>ClawOS AppArmor Profile 設計</li>
+        <li><span class="task-id">F-02</span>complain → enforce 漸進測試</li>
+        <li><span class="task-id">F-03</span>eBPF LSM 自定義 hooks</li>
+        <li><span class="task-id">F-04</span>SELinux Policy 替代方案</li>
+        <li><span class="task-id">F-05</span>Lockdown Integrity 驗證</li>
+      </ul>
+      <div class="domain-count">5 tasks · Security Agent</div>
+    </div>
+
+    <div class="domain-card fade-in" style="border-top: 3px solid var(--yellow);">
+      <div class="domain-header">
+        <span class="domain-id" style="color:var(--yellow); border-color:rgba(255,214,0,0.2)">G</span>
+        <span class="domain-name">系統整合 / 測試 / 部署</span>
+      </div>
+      <ul class="domain-tasks">
+        <li><span class="task-id">G-01</span>Pre-flight 啟動檢查腳本</li>
+        <li><span class="task-id">G-02</span>systemd hardened unit 設定</li>
+        <li><span class="task-id">G-03</span>自動化安全審計測試套件</li>
+        <li><span class="task-id">G-04</span>Security Report 定期產生</li>
+        <li><span class="task-id">G-05</span>Buildroot 最小化 Linux image</li>
+        <li><span class="task-id">G-06</span>ClawOS ISO 映像 + QEMU 驗證</li>
+        <li><span class="task-id">G-07</span>Hardware 測試（x86_64 + aarch64）</li>
+        <li><span class="task-id">G-08</span>效能基準測試</li>
+        <li><span class="task-id">G-09</span>ClawOS v0.1.0 Alpha 發布</li>
+      </ul>
+      <div class="domain-count">9 tasks · Build / DevOps Agent</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════ PHASES ═══════════════ -->
+<section id="phases">
+  <div class="section-tag">Section 03</div>
+  <h2 class="section-title">四段式執行流程</h2>
+  <p class="section-desc">先建標準 → 再改引擎 → 後填數據 → 最後校準。每段必須通過 Gate 閘門才能進入下一段，防止數據不匹配或邏輯斷裂。</p>
+
+  <div class="phases">
+
+    <div class="phase-card p1 fade-in">
+      <div class="phase-num">Phase 01</div>
+      <div class="phase-title">建立標準</div>
+      <div class="phase-sub">先定義所有介面規格、資料格式、安全策略。任何程式碼尚未撰寫。</div>
+      <ul class="phase-items">
+        <li>WIT 介面規格書（WASM ↔ Kernel ABI）</li>
+        <li>seccomp syscall whitelist JSON Schema</li>
+        <li>eBPF event struct 格式凍結</li>
+        <li>ClawFS 路徑規範 + 加密格式</li>
+        <li>cgroup v2 資源配額標準值表</li>
+        <li>AppArmor profile 規則語言規範</li>
+        <li>Agent 間通訊協議（IPC format）</li>
+        <li>ClawOS API Surface 文件</li>
+      </ul>
+      <div class="gate">所有規格書 SHA256 簽章存入 ClawFS Vault</div>
+    </div>
+
+    <div class="phase-card p2 fade-in">
+      <div class="phase-num">Phase 02</div>
+      <div class="phase-title">改造引擎</div>
+      <div class="phase-sub">依據 P1 規格，改造 IronClaw Rust 引擎邏輯。不填任何業務數據。</div>
+      <ul class="phase-items">
+        <li>Kernel Config 生成腳本</li>
+        <li>seccomp-BPF filter Rust 實作</li>
+        <li>eBPF Aya-rs 程式實作</li>
+        <li>Namespace 隔離器 Rust 實作</li>
+        <li>Agent Loop → Kernel Service 重構</li>
+        <li>WASM Runtime bridge 實作</li>
+        <li>ClawFS Rust crate 骨架</li>
+        <li>AppArmor profile 生成器</li>
+      </ul>
+      <div class="gate">cargo build --release 成功，clippy 零 warning</div>
+    </div>
+
+    <div class="phase-card p3 fade-in">
+      <div class="phase-num">Phase 03</div>
+      <div class="phase-title">填入數據</div>
+      <div class="phase-sub">引擎就緒後，填入真實工具定義、記憶體內容、設定值。</div>
+      <ul class="phase-items">
+        <li>IronClaw 工具庫移植至 WASM 格式</li>
+        <li>channels-src 重打包為 ClawOS channel</li>
+        <li>PostgreSQL migrations → ClawFS schema</li>
+        <li>Identity Files + Workspace 初始資料</li>
+        <li>Prompt Injection Pattern DB 載入</li>
+        <li>Endpoint allowlist 設定值</li>
+        <li>LLM Provider 設定橋接</li>
+        <li>Secrets 加密金鑰初始化</li>
+      </ul>
+      <div class="gate">cargo test 全部通過，安全審計 100% pass</div>
+    </div>
+
+    <div class="phase-card p4 fade-in">
+      <div class="phase-num">Phase 04</div>
+      <div class="phase-title">校準</div>
+      <div class="phase-sub">系統整體平衡調整：效能、安全、功能性三角平衡。</div>
+      <ul class="phase-items">
+        <li>seccomp whitelist 修剪（strace 輔助）</li>
+        <li>cgroup 資源值校準</li>
+        <li>eBPF Ring Buffer size 調整</li>
+        <li>WASM 記憶體/CPU 限制 fine-tuning</li>
+        <li>ClawFS HNSW 參數調整</li>
+        <li>AppArmor profile 精化</li>
+        <li>XDP filter 效能測試</li>
+        <li>全系統整合測試</li>
+      </ul>
+      <div class="gate">Security Report 零 CRITICAL，效能達基準 ≥ 80%</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════ AGENTS ═══════════════ -->
+<section id="agents">
+  <div class="section-tag">Section 04</div>
+  <h2 class="section-title">8 個 AI Agent 角色分工</h2>
+  <p class="section-desc">每個 Agent 有嚴格的職責邊界、輸入輸出格式，以及不可越權的操作範圍。</p>
+
+  <div class="agents-grid">
+
+    <div class="agent-card fade-in">
+      <div class="agent-header">
+        <span class="agent-icon">🔧</span>
+        <span class="agent-name">Kernel Engineer Agent</span>
+      </div>
+      <div class="agent-desc">負責 Linux Kernel 配置、編譯、hardening 選項設定與驗證</div>
+      <div class="agent-meta">
+        <span>輸入：</span> P1.5 資源規格書<br>
+        <span>輸出：</span> .config、build 腳本<br>
+        <span>工具：</span> scripts/config、make、gcc-plugin<br>
+        <span>禁止：</span> 修改 eBPF 或 Rust 程式碼
+      </div>
+    </div>
+
+    <div class="agent-card fade-in">
+      <div class="agent-header">
+        <span class="agent-icon">⚡</span>
+        <span class="agent-name">eBPF Agent</span>
+      </div>
+      <div class="agent-desc">撰寫所有 eBPF kernel 程式及 userspace 接收端，管理 hooks 綁定</div>
+      <div class="agent-meta">
+        <span>輸入：</span> P1.3 event struct<br>
+        <span>輸出：</span> .bpf.rs 檔案、Aya-rs 程式<br>
+        <span>工具：</span> aya-rs、bpftool、bpf-linker<br>
+        <span>禁止：</span> 修改 cgroup 或 seccomp 設定
+      </div>
+    </div>
+
+    <div class="agent-card fade-in">
+      <div class="agent-header">
+        <span class="agent-icon">🛡</span>
+        <span class="agent-name">Security Agent</span>
+      </div>
+      <div class="agent-desc">設計 seccomp whitelist、AppArmor profile、namespace 隔離，持有一票否決權</div>
+      <div class="agent-meta">
+        <span>輸入：</span> P1.2、P1.6 規格<br>
+        <span>輸出：</span> seccomp BPF filter、AppArmor profile<br>
+        <span>工具：</span> libseccomp、aa-parser、strace<br>
+        <span>禁止：</span> 觸碰 WASM runtime 或 ClawFS
+      </div>
+    </div>
+
+    <div class="agent-card fade-in">
+      <div class="agent-header">
+        <span class="agent-icon">🔵</span>
+        <span class="agent-name">Core Dev Agent</span>
+      </div>
+      <div class="agent-desc">移植 IronClaw Rust 引擎邏輯，不改動 Kernel 層，保持 ABI 相容</div>
+      <div class="agent-meta">
+        <span>輸入：</span> IronClaw src/、P1.1 WIT 規格<br>
+        <span>輸出：</span> ClawOS Rust crates<br>
+        <span>工具：</span> cargo、rustfmt、clippy<br>
+        <span>禁止：</span> 直接操作 syscall 或 eBPF map
+      </div>
+    </div>
+
+    <div class="agent-card fade-in">
+      <div class="agent-header">
+        <span class="agent-icon">🟦</span>
+        <span class="agent-name">WASM Agent</span>
+      </div>
+      <div class="agent-desc">管理 wasmtime 整合、WIT 介面實作、工具 WASM 打包與 Component Model</div>
+      <div class="agent-meta">
+        <span>輸入：</span> wit/*.wit 文件、tools-src/<br>
+        <span>輸出：</span> .wasm 二進位、WASM bridge<br>
+        <span>工具：</span> wasm-tools、wasmtime、cargo-component<br>
+        <span>禁止：</span> 修改 Kernel config
+      </div>
+    </div>
+
+    <div class="agent-card fade-in">
+      <div class="agent-header">
+        <span class="agent-icon">📁</span>
+        <span class="agent-name">FS Engineer Agent</span>
+      </div>
+      <div class="agent-desc">設計並實作 ClawFS：向量索引、AES-GCM 加密、POSIX 相容介面</div>
+      <div class="agent-meta">
+        <span>輸入：</span> P1.4 ClawFS 規格<br>
+        <span>輸出：</span> ClawFS Rust crate<br>
+        <span>工具：</span> sqlite、sqlcipher、usearch (HNSW)<br>
+        <span>禁止：</span> 觸碰 eBPF 或 seccomp
+      </div>
+    </div>
+
+    <div class="agent-card fade-in">
+      <div class="agent-header">
+        <span class="agent-icon">👁</span>
+        <span class="agent-name">Observability Agent</span>
+      </div>
+      <div class="agent-desc">建立監控、告警、日誌管線，生成定期 Security Report</div>
+      <div class="agent-meta">
+        <span>輸入：</span> eBPF Ring Buffer、cgroup stats<br>
+        <span>輸出：</span> Prometheus metrics、報告腳本<br>
+        <span>工具：</span> prometheus、grafana、journalctl<br>
+        <span>禁止：</span> 修改任何安全策略
+      </div>
+    </div>
+
+    <div class="agent-card fade-in">
+      <div class="agent-header">
+        <span class="agent-icon">🚀</span>
+        <span class="agent-name">Build / DevOps Agent</span>
+      </div>
+      <div class="agent-desc">管理 rootfs、ISO 映像建置、systemd unit、CI/CD pipeline 自動化</div>
+      <div class="agent-meta">
+        <span>輸入：</span> 各 Agent 輸出 artifacts<br>
+        <span>輸出：</span> ClawOS .iso、systemd .service<br>
+        <span>工具：</span> buildroot、qemu、docker<br>
+        <span>禁止：</span> 修改 Kernel 或 Rust 程式碼
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════ CONFLICTS ═══════════════ -->
+<section id="conflicts">
+  <div class="section-tag">Section 05</div>
+  <h2 class="section-title">衝突與阻礙點分析</h2>
+  <p class="section-desc">跨階段衝突點完整清單，HIGH 等級衝突必須在進入下一階段前解決。</p>
+
+  <div style="overflow-x: auto;">
+  <table class="conflict-table fade-in">
+    <thead>
+      <tr>
+        <th>衝突點</th>
+        <th>涉及任務</th>
+        <th>風險</th>
+        <th>解決策略</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>WASM 在 kernel space 的記憶體安全模型與 Rust 所有權衝突</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">P2.4 / D-04</code></td>
+        <td><span class="risk-badge risk-high">HIGH</span></td>
+        <td>採用 eBPF CO-RE + userspace WASM daemon，不強行將 wasmtime 推入 kernel space</td>
+      </tr>
+      <tr>
+        <td>PostgreSQL 依賴與最小化 rootfs 的矛盾</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">P3.3 / E-02</code></td>
+        <td><span class="risk-badge risk-high">HIGH</span></td>
+        <td>Phase 3 替換為 embedded SQLite + pgvector C library 靜態連結，消除 PG 依賴</td>
+      </tr>
+      <tr>
+        <td>seccomp whitelist 與 Rust tokio async runtime 的 syscall 需求</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">P2.2 / C-01</code></td>
+        <td><span class="risk-badge risk-high">HIGH</span></td>
+        <td>先以 strace 分析 tokio runtime 真實 syscall（C-02），再生成最終 whitelist</td>
+      </tr>
+      <tr>
+        <td>eBPF LSM hook 與 AppArmor 規則衝突（雙重判斷）</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">B-03 / F-03</code></td>
+        <td><span class="risk-badge risk-med">MED</span></td>
+        <td>定義優先順序：eBPF LSM DENY 優先於 AppArmor，避免互相抵消</td>
+      </tr>
+      <tr>
+        <td>User Namespace uid_map 與 PostgreSQL 連線認證解耦</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">C-03 / D-01</code></td>
+        <td><span class="risk-badge risk-med">MED</span></td>
+        <td>mTLS client certificate 認證替代 uid-based auth，完全解耦</td>
+      </tr>
+      <tr>
+        <td>cgroup v2 pids.max=64 與 Rust tokio thread pool 衝突</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">C-06 / D-03</code></td>
+        <td><span class="risk-badge risk-med">MED</span></td>
+        <td>Profiling 真實 thread 數，設定 pids.max ≥ tokio threads + WASM workers + buffer</td>
+      </tr>
+      <tr>
+        <td>XDP filter 與 WASM 工具的動態外部 HTTP 請求衝突</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">B-04 / D-06</code></td>
+        <td><span class="risk-badge risk-med">MED</span></td>
+        <td>WASM 工具 HTTP 透過 host function 代理，不直接出網路，XDP 不需改動</td>
+      </tr>
+      <tr>
+        <td>WIT 介面版本與 channels-src WASM ABI 不相容</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">P1.1 / D-05</code></td>
+        <td><span class="risk-badge risk-med">MED</span></td>
+        <td>Phase 1 凍結 WIT 版本，channels-src 重新依 ClawOS WIT 重打包</td>
+      </tr>
+      <tr>
+        <td>ClawFS 向量維度與 IronClaw 記憶體系統嵌入模型不匹配</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">E-02 / E-03</code></td>
+        <td><span class="risk-badge risk-low">LOW</span></td>
+        <td>Phase 1 規格書統一定義向量維度（預設 1536 或 3072），所有組件遵守</td>
+      </tr>
+      <tr>
+        <td>Buildroot 靜態二進位與 wasmtime JIT 需要 mprotect 衝突</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">G-05 / D-04</code></td>
+        <td><span class="risk-badge risk-low">LOW</span></td>
+        <td>seccomp 規則明確允許 mprotect(PROT_READ|PROT_EXEC)，已在 C-01 whitelist 中</td>
+      </tr>
+      <tr>
+        <td>AppArmor enforce mode 阻擋 eBPF 程式載入</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">F-02 / B-01</code></td>
+        <td><span class="risk-badge risk-low">LOW</span></td>
+        <td>AppArmor profile 明確加入 capability bpf 規則，complain 測試期間確認</td>
+      </tr>
+      <tr>
+        <td>Heartbeat System 與 kernel watchdog timer 的時間精度衝突</td>
+        <td><code style="font-family:var(--mono);color:var(--cyan)">D-08 / G-02</code></td>
+        <td><span class="risk-badge risk-low">LOW</span></td>
+        <td>heartbeat 用 CLOCK_MONOTONIC，watchdog 用獨立 kernel timer，互不干擾</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ═══════════════ GATES ═══════════════ -->
+<section id="gates">
+  <div class="section-tag">Section 06</div>
+  <h2 class="section-title">驗證閘門 — 前後衝突再確認</h2>
+  <p class="section-desc">各階段銜接點的最終衝突掃描。RED 項目代表必須解決的阻礙點。</p>
+
+  <div class="gate-section fade-in">
+    <div class="gate-title">Gate P1 → P2（標準 → 引擎）</div>
+    <ul class="check-list">
+      <li class="check-item check-ok">✅ WIT 介面版本已凍結，後續 WASM Agent 不可單方修改</li>
+      <li class="check-item check-ok">✅ seccomp syscall list 已簽章，Security Agent 是唯一授權修改者</li>
+      <li class="check-item check-ok">✅ eBPF event struct 已凍結，eBPF Agent 和 Observability Agent 共用同一版本</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：若 tokio 版本升級可能引入新 syscall → 解法：Cargo.lock 凍結版本</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：WIT component model 工具鏈若不支援目標 ABI → 解法：P1 需確認工具鏈版本</li>
+    </ul>
+  </div>
+
+  <div class="gate-section fade-in">
+    <div class="gate-title">Gate P2 → P3（引擎 → 數據）</div>
+    <ul class="check-list">
+      <li class="check-item check-ok">✅ cargo build --release 成功代表 ABI 相容</li>
+      <li class="check-item check-ok">✅ clippy 零 warning 確保後續 Agent 不接到有 bug 的引擎</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：WASM Agent wasmtime 版本需與 Core Dev Agent Rust 版本一致</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：ClawFS 若尚未實作完成，P3.3 migration 無法執行 → E-01/E-02 需在 P2 完成</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：eBPF 程式若未先載入，P3 工具執行監控會有盲區 → B-01~B-03 需在 P3 前完成</li>
+    </ul>
+  </div>
+
+  <div class="gate-section fade-in">
+    <div class="gate-title">Gate P3 → P4（數據 → 校準）</div>
+    <ul class="check-list">
+      <li class="check-item check-ok">✅ cargo test 全通過確保數據填入不破壞引擎邏輯</li>
+      <li class="check-item check-ok">✅ 安全審計測試套件全通過（seccomp / cgroup / ns / AppArmor 各自測試）</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：Prompt Injection Pattern DB 若使用 regex，需確認無 ReDoS 漏洞</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：LLM Provider 切換可能改變 token 格式 → 需 router 層抽象化</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：Secrets Vault 初始化若失敗（TPM 不可用），fallback 機制需先定義在 P1</li>
+    </ul>
+  </div>
+
+  <div class="gate-section fade-in">
+    <div class="gate-title">Gate P4 完成（校準 → Release）</div>
+    <ul class="check-list">
+      <li class="check-item check-ok">✅ Security Report 零 CRITICAL（HIGH 需附 mitigation 計劃）</li>
+      <li class="check-item check-ok">✅ 效能基準測試達 IronClaw 原版 80% 以上</li>
+      <li class="check-item check-ok">✅ QEMU 整合測試：x86_64 和 aarch64 均可正常開機</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：Buildroot image 大小若超過 128MB，需重新剔除 library</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：硬體 TPM 2.0 測試需要物理機，QEMU 只能模擬</li>
+      <li class="check-item check-warn">⚠️ 阻礙點：效能若未達 80%，優先 disable non-critical eBPF hooks</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ RULES ═══════════════ -->
+<section id="rules">
+  <div class="section-tag">Section 07</div>
+  <h2 class="section-title">AI 任務規格書 — 全域規則</h2>
+  <p class="section-desc">所有 Agent 啟動前必須讀取並遵守以下規則，不可違反。</p>
+
+  <div class="rules-grid">
+    <div class="rule-card fade-in">
+      <div class="rule-id">RULE-001</div>
+      <div class="rule-text">每個 Agent 只能操作自己負責的檔案目錄，不可跨域寫入</div>
+    </div>
+    <div class="rule-card fade-in">
+      <div class="rule-id">RULE-002</div>
+      <div class="rule-text">所有輸出 artifact 必須附帶 SHA256 hash，存入 ClawFS Vault</div>
+    </div>
+    <div class="rule-card fade-in">
+      <div class="rule-id">RULE-003</div>
+      <div class="rule-text">修改任何已凍結規格（P1 輸出）需要雙 Agent 審核（Security + Core Dev）</div>
+    </div>
+    <div class="rule-card fade-in">
+      <div class="rule-id">RULE-004</div>
+      <div class="rule-text">任何 BREAKING CHANGE 必須升版主版號，並觸發所有下游 Agent 重新驗證</div>
+    </div>
+    <div class="rule-card fade-in">
+      <div class="rule-id">RULE-005</div>
+      <div class="rule-text">Agent 執行失敗時，必須回退到最近的 Gate checkpoint，不可繼續前進</div>
+    </div>
+    <div class="rule-card fade-in">
+      <div class="rule-id">RULE-006</div>
+      <div class="rule-text">禁止 Agent 自行擴展任務範圍（scope creep），超出範圍的需求需提案至協調層</div>
+    </div>
+    <div class="rule-card fade-in">
+      <div class="rule-id">RULE-007</div>
+      <div class="rule-text">所有 Agent 執行日誌必須存入 /var/log/clawos/agent-{name}-{date}.log</div>
+    </div>
+    <div class="rule-card fade-in">
+      <div class="rule-id">RULE-008</div>
+      <div class="rule-text">安全相關決策（seccomp / AppArmor / LSM）最終由 Security Agent 一票否決</div>
+    </div>
+  </div>
+
+  <h3 class="sub-title" style="margin-top: 3rem;">任務規格欄位標準</h3>
+  <div class="arch-box" style="border-left-color: var(--purple);">
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">task_id</span><span class="arch-desc">格式：{Domain}-{序號}，例如 A-01、B-03</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">phase</span><span class="arch-desc">P1（標準）/ P2（引擎）/ P3（數據）/ P4（校準）</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">agent</span><span class="arch-desc">負責執行的 Agent 名稱</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">depends_on</span><span class="arch-desc">前置任務 ID 列表（must be DONE before this starts）</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">inputs</span><span class="arch-desc">輸入 artifact 路徑清單（從 ClawFS 讀取）</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">outputs</span><span class="arch-desc">輸出 artifact 路徑清單（寫入 ClawFS）</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">validation_cmd</span><span class="arch-desc">完成後執行的驗證指令（必須 exit 0）</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">rollback_cmd</span><span class="arch-desc">失敗時執行的回退指令</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">timeout_minutes</span><span class="arch-desc">最大執行時間（分鐘），超時自動中止並 rollback</span></div>
+    <div class="arch-layer"><span class="arch-name" style="color:var(--purple)">frozen_spec_deps</span><span class="arch-desc">依賴的 P1 凍結規格 SHA256（若不符則拒絕執行）</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════ TIMELINE ═══════════════ -->
+<section id="timeline">
+  <div class="section-tag">Section 08</div>
+  <h2 class="section-title">24 週時程甘特</h2>
+  <p class="section-desc">從 Kernel 配置到 v0.1.0 Alpha 發布的完整時序安排。</p>
+
+  <div class="timeline">
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W1–2</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P1 · 建立標準</div>
+        <div class="tl-milestone">Kernel Config 確定、WIT v1.0 凍結</div>
+        <div class="tl-output">.config、wit/*.wit、規格書群</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W3–4</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P1 → P2</div>
+        <div class="tl-milestone">seccomp list 定版、rootfs 設計完成</div>
+        <div class="tl-output">whitelist.json、rootfs 目錄結構</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W5–6</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P2 · 改造引擎</div>
+        <div class="tl-milestone">eBPF hooks 實作、namespace 隔離器完成</div>
+        <div class="tl-output">ironclaw-ebpf.rs、netns 腳本</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W7–8</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P2</div>
+        <div class="tl-milestone">AppArmor profile v1、Agent Loop 移植</div>
+        <div class="tl-output">ironclaw AppArmor profile</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W9–10</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P2 → P3</div>
+        <div class="tl-milestone">WASM bridge 完成、ClawFS 骨架就緒</div>
+        <div class="tl-output">wasm-bridge crate、clawfs crate</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W11–12</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P3 · 填入數據</div>
+        <div class="tl-milestone">工具庫移植、channels 重打包</div>
+        <div class="tl-output">*.wasm 工具、channel WASM</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W13–14</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P3 → P4</div>
+        <div class="tl-milestone">Secrets Vault 初始化、Routines Engine</div>
+        <div class="tl-output">kernel keyring init</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W15–16</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P4 · 校準</div>
+        <div class="tl-milestone">資源值校準、全系統 cargo test</div>
+        <div class="tl-output">calibration report</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W17–18</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P4</div>
+        <div class="tl-milestone">Security Report 生成、效能基準測試</div>
+        <div class="tl-output">security-report-*.txt</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W19–20</div>
+      <div class="timeline-content">
+        <div class="tl-phase">P4</div>
+        <div class="tl-milestone">Buildroot image 打包、ISO 建置</div>
+        <div class="tl-output">clawos-v0.1.0.iso</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W21–22</div>
+      <div class="timeline-content">
+        <div class="tl-phase">Release</div>
+        <div class="tl-milestone">QEMU 驗證、x86_64 + aarch64 測試</div>
+        <div class="tl-output">QA test report</div>
+      </div>
+    </div>
+    <div class="timeline-item fade-in">
+      <div class="timeline-week">W23–24</div>
+      <div class="timeline-content" style="border-color: var(--green); box-shadow: 0 0 20px rgba(0,232,122,0.1);">
+        <div class="tl-phase" style="color: var(--green)">🎯 RELEASE</div>
+        <div class="tl-milestone" style="color: var(--white)">ClawOS v0.1.0 Alpha 發布</div>
+        <div class="tl-output" style="color: var(--green)">GitHub Release、CHANGELOG</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ TECH ═══════════════ -->
+<section id="tech">
+  <div class="section-tag">Section 09</div>
+  <h2 class="section-title">技術棧版本鎖定</h2>
+  <p class="section-desc">所有關鍵依賴的版本已確認，Cargo.lock 凍結，不允許單 Agent 升版。</p>
+
+  <div style="overflow-x: auto;">
+  <table class="tech-table fade-in">
+    <thead>
+      <tr>
+        <th>技術</th>
+        <th>版本</th>
+        <th>用途</th>
+        <th>負責 Agent</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Linux Kernel</td><td>6.6 LTS</td><td>主 Kernel（eBPF + BTF 完整支援）</td><td>Kernel Engineer</td></tr>
+      <tr><td>Rust</td><td>1.85+</td><td>IronClaw 原始需求，保持一致</td><td>Core Dev</td></tr>
+      <tr><td>aya-rs</td><td>0.13+</td><td>eBPF Rust framework（kernel + userspace）</td><td>eBPF Agent</td></tr>
+      <tr><td>wasmtime</td><td>27+</td><td>WASM runtime（Component Model 支援）</td><td>WASM Agent</td></tr>
+      <tr><td>cargo-component</td><td>0.20+</td><td>WASM Component Model 打包工具</td><td>WASM Agent</td></tr>
+      <tr><td>SQLite</td><td>3.47+</td><td>ClawFS 後端（FTS5 + vector extension）</td><td>FS Engineer</td></tr>
+      <tr><td>libseccomp</td><td>2.5+</td><td>seccomp-BPF Rust bindings</td><td>Security Agent</td></tr>
+      <tr><td>AppArmor</td><td>3.1+</td><td>LSM profile（enforce mode）</td><td>Security Agent</td></tr>
+      <tr><td>buildroot</td><td>2024.11+</td><td>最小化 rootfs 建置</td><td>Build / DevOps</td></tr>
+      <tr><td>QEMU</td><td>8.2+</td><td>x86_64 + aarch64 整合測試</td><td>QA Agent</td></tr>
+      <tr><td>PostgreSQL</td><td>15+ (Phase 1-2)</td><td>IronClaw 原始後端，Phase 3 替換</td><td>FS Engineer</td></tr>
+      <tr><td>pgvector</td><td>0.7+ (Phase 1-2)</td><td>向量搜尋，Phase 3 改為 usearch</td><td>FS Engineer</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="footer-logo">⬡ ClawOS</div>
+  <div class="footer-meta">
+    AI 任務計劃規格書 v1.0 · 2026-02-23<br>
+    基於 <a href="https://github.com/nearai/ironclaw">nearai/ironclaw</a> (Apache-2.0 / MIT)<br>
+    本文件由 Claude (Anthropic) 輔助生成，供 AI Agent 自動化執行使用
+  </div>
+</footer>
+
+<script>
+  // ── Intersection Observer for fade-in ──
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        entry.target.style.transitionDelay = (i % 4) * 0.08 + 's';
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // ── Active nav link ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav a');
+
+  const navObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(a => a.style.borderBottomColor = 'transparent');
+        const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+        if (active) {
+          active.style.color = 'var(--cyan)';
+          active.style.borderBottomColor = 'var(--cyan)';
+        }
+      }
+    });
+  }, { threshold: 0.4 });
+
+  sections.forEach(s => navObserver.observe(s));
+
+  // ── Terminal typing effect for hero badge ──
+  const badge = document.querySelector('.hero-badge');
+  if (badge) {
+    const text = badge.textContent;
+    badge.textContent = '';
+    let i = 0;
+    const type = () => {
+      if (i < text.length) {
+        badge.textContent += text[i++];
+        setTimeout(type, 30);
+      }
+    };
+    setTimeout(type, 300);
+  }
+</script>
+</body>
+</html>

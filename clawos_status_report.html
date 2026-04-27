@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClawOS - Missing Implementation Analysis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; margin-bottom: 30px; }
+        .header h1 { color: #fff; font-size: 2.5em; margin-bottom: 10px; }
+        .header p { color: rgba(255,255,255,0.9); font-size: 1.1em; }
+        .section { background: #1e293b; border-radius: 12px; padding: 25px; margin-bottom: 25px; border: 1px solid #334155; }
+        .section h2 { color: #a5b4fc; margin-bottom: 20px; font-size: 1.8em; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; }
+        .section h3 { color: #93c5fd; margin: 20px 0 10px 0; font-size: 1.3em; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+        .status-card { background: #0f172a; border-radius: 10px; padding: 20px; border-left: 4px solid; }
+        .status-card.missing { border-left-color: #ef4444; }
+        .status-card.exists { border-left-color: #22c55e; }
+        .status-card.partial { border-left-color: #f59e0b; }
+        .status-card h4 { margin-bottom: 10px; font-size: 1.1em; }
+        .status-card.missing h4 { color: #ef4444; }
+        .status-card.exists h4 { color: #22c55e; }
+        .status-card.partial h4 { color: #f59e0b; }
+        .status-card p { font-size: 0.9em; color: #94a3b8; }
+        .status-card ul { list-style: none; margin-top: 10px; padding-left: 0; }
+        .status-card li { padding: 5px 0; font-size: 0.85em; color: #cbd5e1; }
+        .status-card li::before { content: "• "; color: #4f46e5; }
+        .table-container { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #334155; color: #fff; font-weight: 600; }
+        tr:hover { background: #1e293b; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: 600; }
+        .badge.missing { background: #dc2626; color: #fff; }
+        .badge.exists { background: #16a34a; color: #fff; }
+        .badge.partial { background: #ca8a04; color: #fff; }
+        .summary-box { background: linear-gradient(135deg, #065f46 0%, #047857 100%); padding: 25px; border-radius: 12px; margin-bottom: 25px; }
+        .summary-box h3 { color: #fff; margin-bottom: 15px; }
+        .summary-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+        .stat-item { text-align: center; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; }
+        .stat-number { font-size: 2em; font-weight: bold; color: #fff; }
+        .stat-label { font-size: 0.85em; color: rgba(255,255,255,0.8); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ClawOS - Missing Implementation Analysis</h1>
+            <p>Analysis of unimplemented components in Phase 2 & Phase 3</p>
+        </div>
+
+        <div class="summary-box">
+            <h3>📊 Current Status Summary</h3>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-number">47</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Missing Directories</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">8</div>
+                    <div class="stat-label">Domain Crates</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">~12K</div>
+                    <div class="stat-label">Lines of Code</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>❌ Missing Top-Level Directories</h2>
+            <div class="status-grid">
+                <div class="status-card missing">
+                    <h4>src/</h4>
+                    <p><span class="badge missing">MISSING</span></p>
+                    <p>Top-level Rust main program (Agent Loop Service)</p>
+                    <ul>
+                        <li>Expected: Main binary entry point</li>
+                        <li>Related: P2.5 - IronClaw Agent Loop → ClawOS Kernel Service</li>
+                        <li>Current: Agent Loop in domains/core-dev/src/</li>
+                    </ul>
+                </div>
+
+                <div class="status-card missing">
+                    <h4>wit/</h4>
+                    <p><span class="badge missing">EMPTY</span></p>
+                    <p>WIT Interface Definitions</p>
+                    <ul>
+                        <li>Required: .wit files for 7 WIT interfaces</li>
+                        <li>Related: P1.1 - WIT Interface Spec Book</li>
+                        <li>Expected: filesystem.wit, network.wit, cgroup.wit, etc.</li>
+                    </ul>
+                </div>
+
+                <div class="status-card missing">
+                    <h4>channels/</h4>
+                    <p><span class="badge missing">MISSING</span></p>
+                    <p>WASM-packaged Channels (Telegram/Slack)</p>
+                    <ul>
+                        <li>Required: WASM components for channels-src migration</li>
+                        <li>Related: P3.2 - Channels (Telegram/Slack) repackaging</li>
+                        <li>Reference: channels-src/ exists but empty</li>
+                    </ul>
+                </div>
+
+                <div class="status-card missing">
+                    <h4>tools/</h4>
+                    <p><span class="badge missing">MISSING</span></p>
+                    <p>WASM-packaged Tools</p>
+                    <ul>
+                        <li>Required: WASM components for IronClaw tools</li>
+                        <li>Related: P3.1 - Tool library migration</li>
+                        <li>Reference: tools-src/ exists but empty</li>
+                    </ul>
+                </div>
+
+                <div class="status-card missing">
+                    <h4>migrations/</h4>
+                    <p><span class="badge missing">EMPTY</span></p>
+                    <p>ClawFS Schema Migration Scripts</p>
+                    <ul>
+                        <li>Required: PostgreSQL → SQLite+HNSW migration</li>
+                        <li>Related: P3.3 - PostgreSQL migrations → ClawFS schema</li>
+                        <li>Expected: SQL migration scripts and data transformation tools</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✅ Implemented Domain Crates (Phase 2)</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Lines</th>
+                            <th>P2 Deliverable</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Security</td>
+                            <td>domains/security/</td>
+                            <td><span class="badge exists">✅ COMPLETE</span></td>
+                            <td>~3,300</td>
+                            <td>P2.2, P2.4, P2.8</td>
+                        </tr>
+                        <tr>
+                            <td>eBPF</td>
+                            <td>domains/ebpf/</td>
+                            <td><span class="badge exists">✅ COMPLETE</span></td>
+                            <td>~850</td>
+                            <td>P2.3</td>
+                        </tr>
+                        <tr>
+                            <td>WASM</td>
+                            <td>domains/wasm/</td>
+                            <td><span class="badge exists">✅ COMPLETE</span></td>
+                            <td>~2,200</td>
+                            <td>P2.6</td>
+                        </tr>
+                        <tr>
+                            <td>Filesystem</td>
+                            <td>domains/filesystem/</td>
+                            <td><span class="badge exists">✅ COMPLETE</span></td>
+                            <td>~2,400</td>
+                            <td>P2.7</td>
+                        </tr>
+                        <tr>
+                            <td>Core Dev</td>
+                            <td>domains/core-dev/</td>
+                            <td><span class="badge exists">✅ COMPLETE</span></td>
+                            <td>~1,500</td>
+                            <td>P2.5</td>
+                        </tr>
+                        <tr>
+                            <td>Infra</td>
+                            <td>domains/infra/</td>
+                            <td><span class="badge partial">🟡 CALIBRATION</span></td>
+                            <td>~70</td>
+                            <td>P4.2</td>
+                        </tr>
+                        <tr>
+                            <td>Observability</td>
+                            <td>domains/observability/</td>
+                            <td><span class="badge partial">🟡 CALIBRATION</span></td>
+                            <td>~185</td>
+                            <td>P4.3-P4.8</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Phase 3 Implementation Requirements</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Task ID</th>
+                            <th>Deliverable</th>
+                            <th>Required Directory</th>
+                            <th>Current State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>P3.1</td>
+                            <td>Tool library migration</td>
+                            <td>tools/</td>
+                            <td><span class="badge missing">❌ tools-src/ exists but empty</span></td>
+                        </tr>
+                        <tr>
+                            <td>P3.2</td>
+                            <td>Channels repackaging</td>
+                            <td>channels/</td>
+                            <td><span class="badge missing">❌ channels-src/ exists but empty</span></td>
+                        </tr>
+                        <tr>
+                            <td>P3.3</td>
+                            <td>PG → ClawFS migration</td>
+                            <td>migrations/</td>
+                            <td><span class="badge missing">❌ Directory exists but empty</span></td>
+                        </tr>
+                        <tr>
+                            <td>P3.4</td>
+                            <td>Identity initialization</td>
+                            <td>domains/filesystem/src/identity.rs</td>
+                            <td><span class="badge exists">✅ Implemented</span></td>
+                        </tr>
+                        <tr>
+                            <td>P3.5</td>
+                            <td>Prompt Injection defense</td>
+                            <td>domains/security/src/config.rs</td>
+                            <td><span class="badge exists">✅ Implemented</span></td>
+                        </tr>
+                        <tr>
+                            <td>P3.6</td>
+                            <td>Endpoint allowlist</td>
+                            <td>domains/security/src/config.rs</td>
+                            <td><span class="badge exists">✅ Implemented</span></td>
+                        </tr>
+                        <tr>
+                            <td>P3.7</td>
+                            <td>LLM Provider bridge</td>
+                            <td>domains/core-dev/src/channels.rs</td>
+                            <td><span class="badge exists">✅ Implemented</span></td>
+                        </tr>
+                        <tr>
+                            <td>P3.8</td>
+                            <td>Secrets key init</td>
+                            <td>domains/security/src/config.rs</td>
+                            <td><span class="badge exists">✅ Implemented</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🏗️ Recommended Next Steps</h2>
+            <div class="status-grid">
+                <div class="status-card partial">
+                    <h4>1. Create WIT Definitions (P1.1)</h4>
+                    <ul>
+                        <li>Generate .wit files for 7 interfaces</li>
+                        <li>filesystem.wit, network.wit, cgroup.wit</li>
+                        <li>memory.wit, device.wit, system.wit, logging.wit</li>
+                    </ul>
+                </div>
+
+                <div class="status-card partial">
+                    <h4>2. Create Top-Level src/ (P2.5)</h4>
+                    <ul>
+                        <li>Main binary entry point</li>
+                        <li>Integrates Agent Loop from domains/core-dev</li>
+                        <li>Service lifecycle management</li>
+                    </ul>
+                </div>
+
+                <div class="status-card partial">
+                    <h4>3. Migrate Tools (P3.1)</h4>
+                    <ul>
+                        <li>Convert tools-src to WASM components</li>
+                        <li>Use WIT interface definitions</li>
+                        <li>Store in tools/ directory</li>
+                    </ul>
+                </div>
+
+                <div class="status-card partial">
+                    <h4>4. Migrate Channels (P3.2)</h4>
+                    <ul>
+                        <li>Convert channels-src to WASM components</li>
+                        <li>Telegram & Slack channel implementations</li>
+                        <li>Store in channels/ directory</li>
+                    </ul>
+                </div>
+
+                <div class="status-card partial">
+                    <h4>5. Create Migration Scripts (P3.3)</h4>
+                    <ul>
+                        <li>PostgreSQL → SQLite schema migration</li>
+                        <li>Data transformation scripts</li>
+                        <li>Verification queries</li>
+                    </ul>
+                </div>
+
+                <div class="status-card partial">
+                    <h4>6. Fix CI/CD Build</h4>
+                    <ul>
+                        <li>Currently: workflow #5 in progress</li>
+                        <li>Need: Cargo.lock for workspace</li>
+                        <li>Need: Rust 1.75 build verification</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔗 Reference Links</h2>
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin-bottom: 10px;"><a href="https://github.com/atbox-zz/clawos" style="color: #93c5fd; text-decoration: none;">🔗 GitHub Repository: atbox-zz/clawos</a></li>
+                <li style="margin-bottom: 10px;"><a href="https://github.com/atbox-zz/clawos/actions" style="color: #93c5fd; text-decoration: none;">🔗 GitHub Actions: CI/CD Workflow</a></li>
+                <li style="margin-bottom: 10px;"><a href="https://github.com/nearai/ironclaw" style="color: #93c5fd; text-decoration: none;">🔗 Source: nearai/ironclaw</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

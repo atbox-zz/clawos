@@ -1,0 +1,31 @@
+[package]
+name = "clawos-ebpf"
+version = "0.1.0"
+edition = "2021"
+authors = ["ClawOS Project"]
+license = "Apache-2.0 OR MIT"
+description = "eBPF monitoring agent for ClawOS kernel-level observability"
+
+[dependencies]
+aya = { version = "0.13", default-features = false }
+aya-log = "0.2"
+log = "0.4"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+thiserror = "1"
+libc = "0.2"
+bytes = "1"
+
+[build-dependencies]
+aya-build = "0.1.3"
+anyhow = "1.0"
+cargo_metadata = "0.23"
+[lib]
+name = "clawos_ebpf"
+path = "src/bpf/main.bpf.rs"
+
+[[bin]]
+name = "clawos-ebpf"
+path = "src/main.rs"
+
+# Note: Using workspace profiles defined in root Cargo.toml

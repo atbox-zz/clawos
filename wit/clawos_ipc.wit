@@ -1,0 +1,71 @@
+// clawos:ipc@1.0.0
+// WIT Interface Specification for ClawOS IPC Protocol (P1.7 Frozen)
+//
+// This WIT interface defines the inter-process communication protocol
+// between the Agent Loop and external processes/channels.
+//
+// Version: 1.0.0
+// Status: FROZEN (P1.7)
+// SHA256: PLACEHOLDER_TO_BE_FILLED_ON_SIGNING
+
+/// IPC message structure
+record ipc-message {
+    message-id: string,
+    sender-id: string,
+    timestamp: u64,
+    content: string,
+    message-type: string,  // "tool_call", "query", "admin", "routine"
+    message-priority: u8,  // 0=low, 1=normal, 2=high, 3=urgent
+}
+
+/// IPC reply structure
+record ipc-reply {
+    message-id: string,
+    success: bool,
+    content: string,
+    tool-calls: list<tool-call-result>,
+    tokens-used: u32,
+    error-message: option<string>,
+}
+
+/// Tool call result
+record tool-call-result {
+    tool-name: string,
+    tool-input: string,
+    tool-output: string,
+    success: bool,
+    error-message: option<string>,
+}
+
+/// IPC Client interface (channels/tools connecting to agent)
+interface ipc-client {
+    /// Send request to agent and await reply
+    /// Returns: reply or error
+    send-request: func(message: ipc-message) -> result<ipc-reply, string>
+    
+    /// Send async request (fire-and-forget)
+    send-async: func(message: ipc-message) -> result<_, string>
+    
+    /// Subscribe to agent status updates
+    subscribe-status: func(callback: func(status: string)) -> result<_, string>
+}
+
+/// IPC Server interface (agent loop)
+interface ipc-server {
+    /// Start IPC server on Unix domain socket
+    /// Returns: success or error
+    start-server: func(socket-path: string) -> result<_, string>
+    
+    /// Stop IPC server
+    stop-server: func() -> result<_, string>
+    
+    /// Register message handler
+    register-handler: func(message-type: string, handler: func(message: ipc-message) -> ipc-reply) -> result<_, string>
+    
+    /// Broadcast status update to all subscribers
+    broadcast-status: func(status: string) -> result<_, string>
+}
+
+// Export interfaces
+export ipc-client
+export ipc-server

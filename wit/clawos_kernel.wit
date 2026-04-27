@@ -1,0 +1,175 @@
+// clawos:kernel@2.0.0
+// WIT Interface Specification for ClawOS Kernel ABI (P1.1 Frozen)
+//
+// This WIT interface defines the boundary between WASM tools and the ClawOS
+// kernel/userspace services. All tools MUST implement this interface.
+//
+// Version: 2.0.0
+// Status: FROZEN (P1.1)
+// SHA256: PLACEHOLDER_TO_BE_FILLED_ON_SIGNING
+
+/// ClawOS kernel interface providing access to system resources
+interface clawos-kernel {
+    /// File system operations
+    interface fs {
+        /// Read file contents into bytes
+        /// Returns: bytes or error
+        read-file: func(path: string) -> result<list<u8>, string>
+        
+        /// Write bytes to file
+        /// Returns: success or error
+        write-file: func(path: string, data: list<u8>) -> result<_, string>
+        
+        /// Check if file exists
+        /// Returns: true if exists, false otherwise
+        file-exists: func(path: string) -> bool
+        
+        /// Delete file
+        /// Returns: success or error
+        delete-file: func(path: string) -> result<_, string>
+        
+        /// List directory contents
+        /// Returns: list of file paths or error
+        list-directory: func(path: string) -> result<list<string>, string>
+    }
+    
+    /// Network operations
+    interface network {
+        /// Make HTTP GET request
+        /// Returns: response body or error
+        http-get: func(url: string, headers: list<tuple<string, string>>) -> result<string, string>
+        
+        /// Make HTTP POST request
+        /// Returns: response body or error
+        http-post: func(url: string, headers: list<tuple<string, string>>, body: string) -> result<string, string>
+        
+        /// Resolve DNS hostname
+        /// Returns: IP address or error
+        dns-resolve: func(hostname: string) -> result<string, string>
+        
+        /// Check connectivity
+        /// Returns: true if reachable, false otherwise
+        check-connectivity: func(host: string, port: u16) -> bool
+    }
+    
+    /// Process operations
+    interface process {
+        /// Get current process ID
+        /// Returns: PID
+        get-pid: func() -> u32
+        
+        /// Get current process working directory
+        /// Returns: path
+        get-cwd: func() -> string
+        
+        /// Set environment variable
+        /// Returns: success or error
+        set-env: func(key: string, value: string) -> result<_, string>
+        
+        /// Get environment variable
+        /// Returns: value or empty if not set
+        get-env: func(key: string) -> string
+        
+        /// Spawn child process
+        /// Returns: child PID or error
+        spawn: func(command: list<string>, env: list<tuple<string, string>>) -> result<u32, string>
+    }
+    
+    /// Memory operations
+    interface memory {
+        /// Allocate memory region
+        /// Returns: pointer or error
+        alloc: func(size: u64) -> result<u64, string>
+        
+        /// Free memory region
+        free: func(ptr: u64) -> result<_, string>
+        
+        /// Get current memory usage
+        /// Returns: bytes used
+        get-usage: func() -> u64
+    }
+    
+    /// Clock/time operations
+    interface clock {
+        /// Get current timestamp in nanoseconds
+        /// Returns: timestamp
+        now: func() -> u64
+        
+        /// Sleep for specified milliseconds
+        sleep: func(ms: u32)
+    }
+    
+    /// Logging operations
+    interface log {
+        /// Log informational message
+        info: func(message: string)
+        
+        /// Log warning message
+        warn: func(message: string)
+        
+        /// Log error message
+        error: func(message: string)
+        
+        /// Log debug message
+        debug: func(message: string)
+    }
+    
+    /// ClawFS operations
+    interface clawfs {
+        /// Retrieve tool binary from ClawFS
+        /// Returns: WASM bytes or error
+        get-tool: func(tool-name: string, version: string) -> result<list<u8>, string>
+        
+        /// Search vector index
+        /// Returns: ranked results
+        vector-search: func(query: string, limit: u32) -> result<list<tuple<string, float32>>, string>
+        
+        /// Store agent memory turn
+        /// Returns: success or error
+        store-memory: func(conversation-id: string, user-msg: string, assistant-msg: string) -> result<_, string>
+        
+        /// Retrieve agent memory context
+        /// Returns: memory turns or error
+        get-memory: func(conversation-id: string, limit: u32) -> result<list<tuple<string, string>>, string>
+    }
+    
+    use fs.{read-file, write-file, file-exists, delete-file, list-directory}
+    use network.{http-get, http-post, dns-resolve, check-connectivity}
+    use process.{get-pid, get-cwd, set-env, get-env, spawn}
+    use memory.{alloc, free, get-usage}
+    use clock.{now, sleep}
+    use log.{info, warn, error, debug}
+    use clawfs.{get-tool, vector-search, store-memory, get-memory}
+}
+
+/// ClawOS cgroup resource management
+interface clawos-cgroup {
+    /// Get current CPU limit (in shares)
+    get-cpu-limit: func() -> u64
+    
+    /// Get current memory limit (in bytes)
+    get-memory-limit: func() -> u64
+    
+    /// Get current PID limit
+    get-pid-limit: func() -> u64
+    
+    /// Get current usage statistics
+    get-usage: func() -> tuple<u64, u64, u64>  // (cpu, memory, pid)
+}
+
+/// ClawOS security context
+interface clawos-security {
+    /// Check if tool has required capability
+    has-capability: func(capability: string) -> bool
+    
+    /// Get current security context (domain, apparmor profile)
+    get-context: func() -> tuple<string, string>
+    
+    /// Verify API endpoint is in allowlist
+    endpoint-allowed: func(url: string) -> bool
+}
+
+// Export all interfaces
+export clawos-kernel
+export clawos-cgroup
+export clawos-security

@@ -1,111 +1,108 @@
 {
   "$schema": "https://clawos.dev/schemas/phase-spec/v1.0",
-  "version":  "1.0.0",
-  "phase":    "P3",
-  "title":    "ClawOS Phase 3 — Data Population & Integration",
-  "status":   "completed",
-
+  "version": "1.0.0",
+  "phase": "P3",
+  "title": "ClawOS Phase 3 — Data Population & Integration",
+  "status": "completed",
   "goal": "Wire the P2 skeleton with real data: WASM tools compiled, channels connected, IronClaw data migrated, LLM provider live, anomaly engine running.",
-
   "tasks": {
     "D-01": {
-      "title":    "web-search tool: Brave/Tavily WASM binary",
-      "owner":    "WASM Agent",
-      "command":  "cd tools/web-search && cargo build --target wasm32-wasip1 --release",
-      "output":   "tools/web-search/tool.wasm",
-      "status":   "completed"
+      "title": "web-search tool: Brave/Tavily WASM binary",
+      "owner": "WASM Agent",
+      "command": "cd tools/web-search && cargo build --target wasm32-wasip1 --release",
+      "output": "tools/web-search/tool.wasm",
+      "status": "completed"
     },
     "D-02": {
-      "title":    "file-read tool: ClawFS read WASM binary",
-      "owner":    "WASM Agent",
-      "command":  "cd tools/file-read && cargo build --target wasm32-wasip1 --release",
-      "output":   "tools/file-read/tool.wasm",
-      "status":   "completed"
+      "title": "file-read tool: ClawFS read WASM binary",
+      "owner": "WASM Agent",
+      "command": "cd tools/file-read && cargo build --target wasm32-wasip1 --release",
+      "output": "tools/file-read/tool.wasm",
+      "status": "completed"
     },
     "D-03": {
-      "title":    "summarise tool: LLM summarisation WASM binary",
-      "owner":    "WASM Agent",
-      "command":  "cd tools/summarise && cargo build --target wasm32-wasip1 --release",
-      "output":   "tools/summarise/tool.wasm",
-      "status":   "completed"
+      "title": "summarise tool: LLM summarisation WASM binary",
+      "owner": "WASM Agent",
+      "command": "cd tools/summarise && cargo build --target wasm32-wasip1 --release",
+      "output": "tools/summarise/tool.wasm",
+      "status": "completed"
     },
     "D-04": {
-      "title":    "Connect NEAR AI LLM provider",
-      "owner":    "Core Dev Agent",
-      "action":   "Set CLAWOS_LLM_API_KEY or add to keyring; configure config.toml llm.backend=near_ai",
-      "test":     "curl https://api.near.ai/v1/models",
-      "status":   "completed"
+      "title": "Connect NEAR AI LLM provider",
+      "owner": "Core Dev Agent",
+      "action": "Set CLAWOS_LLM_API_KEY or add to keyring; configure config.toml llm.backend=near_ai",
+      "test": "curl https://api.near.ai/v1/models",
+      "status": "completed"
     },
     "D-05": {
-      "title":    "Telegram channel: set bot token + webhook",
-      "owner":    "Channel Agent",
-      "action":   "keyctl add user telegram-bot-token <TOKEN> @s; configure webhook URL",
-      "test":     "curl https://api.telegram.org/bot<TOKEN>/getMe",
-      "status":   "completed"
+      "title": "Telegram channel: set bot token + webhook",
+      "owner": "Channel Agent",
+      "action": "keyctl add user telegram-bot-token <TOKEN> @s; configure webhook URL",
+      "test": "curl https://api.telegram.org/bot<TOKEN>/getMe",
+      "status": "completed"
     },
     "D-06": {
-      "title":    "Web gateway: enable in config + test SSE",
-      "owner":    "Channel Agent",
-      "action":   "Set web_gateway.enabled=true in config.toml; run integration test",
-      "test":     "curl http://localhost:8080/health",
-      "status":   "completed"
+      "title": "Web gateway: enable in config + test SSE",
+      "owner": "Channel Agent",
+      "action": "Set web_gateway.enabled=true in config.toml; run integration test",
+      "test": "curl http://localhost:8080/health",
+      "status": "completed"
     },
     "E-01": {
-      "title":    "Generate embeddings for existing workspace files",
-      "owner":    "ClawFS Agent",
-      "action":   "Iterate all files in ClawFS, chunk, embed via NEAR AI, store in embeddings table",
-      "batch":    "100 files per job",
-      "status":   "completed"
+      "title": "Generate embeddings for existing workspace files",
+      "owner": "ClawFS Agent",
+      "action": "Iterate all files in ClawFS, chunk, embed via NEAR AI, store in embeddings table",
+      "batch": "100 files per job",
+      "status": "completed"
     },
     "E-02": {
-      "title":    "PostgreSQL → ClawFS migration",
-      "owner":    "ClawFS Agent",
-      "command":  "python3 migrations/pg_to_clawfs.py",
-      "prereq":   "PG_URL env set, CLAWFS_DB writable",
-      "status":   "completed"
+      "title": "PostgreSQL → ClawFS migration",
+      "owner": "ClawFS Agent",
+      "command": "python3 migrations/pg_to_clawfs.py",
+      "prereq": "PG_URL env set, CLAWFS_DB writable",
+      "status": "completed"
     },
     "E-03": {
-      "title":    "Hybrid search integration test",
-      "owner":    "Core Dev Agent",
-      "test":     "cargo test -p clawfs -- hybrid_search",
-      "status":   "completed"
+      "title": "Hybrid search integration test",
+      "owner": "Core Dev Agent",
+      "test": "cargo test -p clawfs -- hybrid_search",
+      "status": "completed"
     },
     "F-01": {
-      "title":    "AppArmor: load all profiles in enforce mode",
-      "owner":    "Security Agent",
-      "command":  "apparmor_parser -r apparmor/clawos-agent && aa-enforce /etc/apparmor.d/clawos-agent",
-      "verify":   "aa-status | grep enforce | grep clawos",
-      "status":   "completed"
+      "title": "AppArmor: load all profiles in enforce mode",
+      "owner": "Security Agent",
+      "command": "apparmor_parser -r apparmor/clawos-agent && aa-enforce /etc/apparmor.d/clawos-agent",
+      "verify": "aa-status | grep enforce | grep clawos",
+      "status": "completed"
     },
     "F-02": {
-      "title":    "eBPF: verify all 4 programs attach to running kernel",
-      "owner":    "Security Agent",
-      "command":  "bpftool prog list | grep clawos",
+      "title": "eBPF: verify all 4 programs attach to running kernel",
+      "owner": "Security Agent",
+      "command": "bpftool prog list | grep clawos",
       "expected": "clawos_execve, clawos_openat, clawos_lsm_file_open, clawos_lsm_socket_connect",
-      "status":   "completed"
+      "status": "completed"
     },
     "F-03": {
-      "title":    "eBPF anomaly engine: test with synthetic events",
-      "owner":    "Security Agent",
-      "test":     "cargo test -p clawos-ebpf-userspace -- anomaly",
-      "status":   "completed"
+      "title": "eBPF anomaly engine: test with synthetic events",
+      "owner": "Security Agent",
+      "test": "cargo test -p clawos-ebpf-userspace -- anomaly",
+      "status": "completed"
     },
     "G-01": {
-      "title":    "P2→P3 gate: run gate.check P2_TO_P3",
-      "owner":    "Core Dev Agent",
-      "command":  "/gate P2→P3",
-      "blocks":   "P3 start",
-      "status":   "completed"
+      "title": "P2→P3 gate: run gate.check P2_TO_P3",
+      "owner": "Core Dev Agent",
+      "command": "/gate P2→P3",
+      "blocks": "P3 start",
+      "status": "completed"
     },
     "G-02": {
-      "title":    "P3→P4 gate: all tools loaded + security active",
-      "owner":    "Core Dev Agent",
-      "command":  "/gate P3→P4",
-      "blocks":   "P4 start",
-      "status":   "completed"
+      "title": "P3→P4 gate: all tools loaded + security active",
+      "owner": "Core Dev Agent",
+      "command": "/gate P3→P4",
+      "blocks": "P4 start",
+      "status": "completed"
     }
   },
-
   "gate_criteria": {
     "P3_TO_P4": [
       "tools/web-search/tool.wasm present",
@@ -117,5 +114,9 @@
       "ClawFS migration vault entry present",
       "cargo test --workspace passes"
     ]
-  }
+  },
+  "gate_status": "PASS",
+  "gate_id": "P3→P4",
+  "gate_completed_at": "2026-04-23T18:35:31Z",
+  "gate_note": "All 14 tasks completed; G-02 P3→P4 gate passed"
 }

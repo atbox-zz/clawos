@@ -6,7 +6,10 @@ edition = "2021"
 [lib]
 name       = "telegram"
 path       = "src/lib.rs"
-crate-type = ["cdylib"]
+# FIX D-01: agent statically links telegram as a Cargo path dependency —
+# cdylib is not needed and breaks x86_64-unknown-linux-musl (no dynamic linker).
+# Removed crate-type entirely; Rust defaults to rlib which works everywhere.
+
 
 [dependencies]
 serde      = { version = "1", features = ["derive"], default-features = false }

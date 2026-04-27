@@ -1,0 +1,309 @@
+{
+  "schema_version": "1.0.0",
+  "whitelist_id": "550e8400-e29b-41d4-a716-446655440000",
+  "created_at": "2026-02-24T00:00:00Z",
+  "created_by": "Security Agent",
+  "syscalls": [
+    {
+      "name": "read",
+      "permission": "ALLOW",
+      "category": "file_io",
+      "notes": "Basic file read operation",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "write",
+      "permission": "ALLOW",
+      "category": "file_io",
+      "notes": "Basic file write operation",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "open",
+      "permission": "ALLOW",
+      "category": "file_io",
+      "notes": "File open operation",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "openat",
+      "permission": "ALLOW",
+      "category": "file_io",
+      "notes": "File openat operation (modern open)",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "close",
+      "permission": "ALLOW",
+      "category": "file_io",
+      "notes": "File descriptor close",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "stat",
+      "permission": "ALLOW",
+      "category": "file_io",
+      "notes": "File stat operation",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "fstat",
+      "permission": "ALLOW",
+      "category": "file_io",
+      "notes": "File descriptor stat",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "mmap",
+      "permission": "ALLOW",
+      "category": "memory",
+      "notes": "Memory mapping for Rust allocator",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "munmap",
+      "permission": "ALLOW",
+      "category": "memory",
+      "notes": "Memory unmapping",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "mprotect",
+      "permission": "ALLOW",
+      "category": "memory",
+      "notes": "Memory protection changes (required for JIT)",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "brk",
+      "permission": "ALLOW",
+      "category": "memory",
+      "notes": "Heap brk operation",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "madvise",
+      "permission": "ALLOW",
+      "category": "memory",
+      "notes": "Memory advice hints",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "socket",
+      "permission": "CONDITIONAL",
+      "category": "network",
+      "conditions": {
+        "port_restriction": {
+          "allowed_ports": [5432],
+          "description": "PostgreSQL database port only"
+        },
+        "description": "Socket creation allowed only for PostgreSQL connections (port 5432)"
+      },
+      "notes": "Network socket with port restriction",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "connect",
+      "permission": "CONDITIONAL",
+      "category": "network",
+      "conditions": {
+        "port_restriction": {
+          "allowed_ports": [5432],
+          "description": "PostgreSQL database port only"
+        },
+        "description": "Connect allowed only to PostgreSQL (port 5432)"
+      },
+      "notes": "Network connect with port restriction",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "recv",
+      "permission": "ALLOW",
+      "category": "network",
+      "notes": "Network receive",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "send",
+      "permission": "ALLOW",
+      "category": "network",
+      "notes": "Network send",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "poll",
+      "permission": "ALLOW",
+      "category": "network",
+      "notes": "Poll for events",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "epoll_create1",
+      "permission": "ALLOW",
+      "category": "tokio_runtime",
+      "notes": "Tokio async runtime: epoll instance creation",
+      "verified_by_strace": true,
+      "tokio_required": true
+    },
+    {
+      "name": "epoll_ctl",
+      "permission": "ALLOW",
+      "category": "tokio_runtime",
+      "notes": "Tokio async runtime: epoll control",
+      "verified_by_strace": true,
+      "tokio_required": true
+    },
+    {
+      "name": "epoll_wait",
+      "permission": "ALLOW",
+      "category": "tokio_runtime",
+      "notes": "Tokio async runtime: epoll wait",
+      "verified_by_strace": true,
+      "tokio_required": true
+    },
+    {
+      "name": "clock_gettime",
+      "permission": "ALLOW",
+      "category": "time",
+      "notes": "Get time",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "clock_nanosleep",
+      "permission": "ALLOW",
+      "category": "time",
+      "notes": "High-resolution sleep",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "rt_sigaction",
+      "permission": "ALLOW",
+      "category": "signals",
+      "notes": "Signal action setup",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "rt_sigprocmask",
+      "permission": "ALLOW",
+      "category": "signals",
+      "notes": "Signal mask manipulation",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "rt_sigreturn",
+      "permission": "ALLOW",
+      "category": "signals",
+      "notes": "Signal return",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "exit",
+      "permission": "ALLOW",
+      "category": "process",
+      "notes": "Process exit",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "exit_group",
+      "permission": "ALLOW",
+      "category": "process",
+      "notes": "Thread group exit",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "getpid",
+      "permission": "ALLOW",
+      "category": "process",
+      "notes": "Get process ID",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "futex",
+      "permission": "ALLOW",
+      "category": "process",
+      "notes": "Fast userspace mutex (Rust std uses this)",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "clone",
+      "permission": "ALLOW",
+      "category": "process",
+      "notes": "Thread creation (Rust std uses this)",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "clone3",
+      "permission": "ALLOW",
+      "category": "process",
+      "notes": "Modern thread creation",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "prctl",
+      "permission": "ALLOW",
+      "category": "misc",
+      "notes": "Process control operations",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "getrandom",
+      "permission": "ALLOW",
+      "category": "misc",
+      "notes": "Get random bytes from kernel",
+      "verified_by_strace": true,
+      "tokio_required": false
+    },
+    {
+      "name": "eventfd2",
+      "permission": "ALLOW",
+      "category": "tokio_runtime",
+      "notes": "Tokio async runtime: eventfd for notifications",
+      "verified_by_strace": true,
+      "tokio_required": true
+    },
+    {
+      "name": "pipe2",
+      "permission": "ALLOW",
+      "category": "misc",
+      "notes": "Create pipe with flags",
+      "verified_by_strace": true,
+      "tokio_required": false
+    }
+  ],
+  "metadata": {
+    "target_process": "ironclaw-core",
+    "environment": "production",
+    "security_level": "strict",
+    "tokio_version": "1.40",
+    "rust_version": "1.85"
+  }
+}
